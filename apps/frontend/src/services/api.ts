@@ -67,8 +67,16 @@ export const api = {
     return res.data;
   },
 
-  async getVersionProfile(hash: string): Promise<VersionProfile> {
-    const res = await apiClient.get<VersionProfile>(`/versions/${hash}/profile`);
+  async getVersionProfile(hash: string, targetColumn?: string): Promise<VersionProfile> {
+    const params = targetColumn ? { target_column: targetColumn } : undefined;
+    const res = await apiClient.get<VersionProfile>(`/versions/${hash}/profile`, { params });
+    return res.data;
+  },
+
+  async updateVersionTarget(hash: string, targetColumn: string | null): Promise<VersionProfile> {
+    const res = await apiClient.put<VersionProfile>(`/versions/${hash}/target`, {
+      target_column: targetColumn,
+    });
     return res.data;
   },
 

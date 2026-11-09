@@ -51,6 +51,7 @@ export interface HistogramBin {
   label?: string;
   count: number;
   height_percentage: number;
+  is_outlier?: boolean;
 }
 
 export interface ColumnStats {
@@ -77,6 +78,16 @@ export interface ColumnProfile {
   histogram: HistogramBin[];
   is_flagged: boolean;
   flag_reasons: string[];
+  inconsistent_examples?: string[];
+  inconsistent_rows_count?: number;
+}
+
+export interface SubScores {
+  completeness: number;
+  uniqueness: number;
+  validity: number;
+  consistency: number;
+  class_balance: number | null;
 }
 
 export interface ProfileSummary {
@@ -85,15 +96,31 @@ export interface ProfileSummary {
   file_size_bytes: number;
   duplicate_rows_count: number;
   target_column?: string | null;
+  original_filename?: string | null;
   flagged_columns_count: number;
   numeric_columns_count: number;
   category_columns_count: number;
+  health_score: number;
+  sub_scores: SubScores;
+  score_weights?: Record<string, number>;
+}
+
+export interface FindingItem {
+  number: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  title: string;
+  description: string;
+  action_label: string;
+  action_type: string;
+  column?: string | null;
 }
 
 export interface VersionProfile {
   summary: ProfileSummary;
+  findings: FindingItem[];
   columns: ColumnProfile[];
   dataset_id: string;
   dataset_name?: string;
+  original_filename?: string;
   version_hash: string;
 }

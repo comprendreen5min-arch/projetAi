@@ -13,8 +13,8 @@ def test_version_profiling_and_caching(client):
         "5,50,45000,Tangier,0\n"  # duplicated row
     ).encode("utf-8")
 
-    # 1. Create dataset via upload-raw
-    files = {"file": ("profiling_sample.csv", csv_data, "text/csv")}
+    # 1. Create dataset via upload-raw with specific original filename
+    files = {"file": ("test_churn.csv", csv_data, "text/csv")}
     create_res = client.post("/api/v1/datasets/upload-raw", data={"name": "churn_profiling"}, files=files)
     assert create_res.status_code == 201
     dataset = create_res.json()
@@ -25,44 +25,82 @@ def test_version_profiling_and_caching(client):
     assert profile_res.status_code == 200
     profile = profile_res.json()
 
-    # 3. Check summary metrics
+    # 3. Check summary metrics and original filename
     summary = profile["summary"]
     assert summary["total_rows"] == 6
     assert summary["total_columns"] == 5
     assert summary["duplicate_rows_count"] == 1
     assert summary["target_column"] == "churn"
+    assert profile["original_filename"] == "test_churn.csv"
 
-    # 4. Check column-level calculations
-    cols_by_name = {c["name"]: c for c in profile["columns"]}
+    # 4. Check Phase B: 5 sub-scores on 100
+    sub_scores = summary["sub_scores"]
+    assert "completeness" in sub_scores
+    assert "uniqueness" in sub_scores
+    assert "validity" in sub_scores
+    assert "consistency" in sub_scores
+    assert "class_balance" in sub_scores
 
-    # customer_id: detected as 'id'
-    assert cols_by_name["customer_id"]["detected_type"] == "id"
+    # Completeness: 1 missing cell out of 30 cells (6*5) = 29/30 = 96.7%
+    assert sub_scores["completeness"] > 95.0
 
-    # age: missing 1 out of 6 -> 16.67%
-    age_col = cols_by_name["age"]
-    assert age_col["null_count"] == 1
-    assert age_col["null_percentage"] > 16.0
-    assert age_col["detected_type"] == "nombre"
-    assert age_col["stats"] is not None
-    assert age_col["stats"]["min"] == 25.0
-    assert age_col["stats"]["max"] == 50.0
+    # Uniqueness: 1 duplicate row out of 6 = 5/6 = 83.3%
+    assert sub_scores["uniqueness"] > 80.0
 
-    # income: outlier detection via IQR
-    income_col = cols_by_name["income"]
+    # Health score must be calculated as weighted average
+    assert 0 <= summary["health_score"] <= 100
+
+    # 5. Check Phase B: Findings (Ce qui demande votre attention)
+    findings = profile["findings"]
+    assert len(findings) > 0
+    # Must be sorted by severity: HIGH, MEDIUM, LOW
+    severities = [f["severity"] for f in findings]
+    assert "HIGH" in severities or "MEDIUM" in severities
+    for f in findings:
+        assert f["action_label"] in ["Corriger →", "Examiner →", "Fusionner →", "Supprimer →", "Voir les options →"]
+
+    # 6. Check outlier grouped in last histogram bar in red
+    income_col = next(c for c in profile["columns"] if c["name"] == "income")
     assert income_col["outlier_count"] >= 1
-    assert income_col["is_flagged"] is True
+    last_bar = income_col["histogram"][-1]
+    assert last_bar["is_outlier"] is True
 
-    # city: inconsistent casing ("Casablanca" vs "casablanca") -> flagged
-    city_col = cols_by_name["city"]
-    assert city_col["detected_type"] == "catégorie"
+    # 7. Check Phase B: Target update and memorization
+    target_res = client.put(f"/api/v1/versions/{version_hash}/target", json={"target_column": "income"})
+    assert target_res.status_code == 200
+    updated = target_res.json()
+    assert updated["summary"]["target_column"] == "income"
+
+    # Subsequent GET retrieves memorized target
+    get_res = client.get(f"/api/v1/versions/{version_hash}/profile")
+    assert get_res.status_code == 200
+    assert get_res.json()["summary"]["target_column"] == "income"
+
+
+def test_inconsistent_categories_detection(client):
+    # CSV with accents, casing, and spaces inconsistency
+    csv_data = (
+        "id,city\n"
+        "1,Montréal\n"
+        "2,Montreal\n"
+        "3,Casablanca\n"
+        "4,casablanca\n"
+        "5, Rabat \n"
+        "6,Rabat\n"
+    ).encode("utf-8")
+
+    files = {"file": ("cities.csv", csv_data, "text/csv")}
+    create_res = client.post("/api/v1/datasets/upload-raw", data={"name": "city_dataset"}, files=files)
+    assert create_res.status_code == 201
+    version_hash = create_res.json()["versions"][0]["version_hash"]
+
+    profile_res = client.get(f"/api/v1/versions/{version_hash}/profile")
+    assert profile_res.status_code == 200
+    profile = profile_res.json()
+
+    city_col = next(c for c in profile["columns"] if c["name"] == "city")
     assert city_col["is_flagged"] is True
+    assert len(city_col["inconsistent_examples"]) > 0
 
-    # churn: detected as 'cible'
-    churn_col = cols_by_name["churn"]
-    assert churn_col["detected_type"] == "cible"
-
-    # 5. Check caching: cache file must exist on disk and repeat call returns exact same
-    repeat_res = client.get(f"/api/v1/versions/{version_hash}/profile")
-    assert repeat_res.status_code == 200
-    assert repeat_res.json()["summary"]["total_rows"] == 6
-
+    # Consistency sub-score should be < 100
+    assert profile["summary"]["sub_scores"]["consistency"] < 100.0

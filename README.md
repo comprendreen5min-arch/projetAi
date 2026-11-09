@@ -157,6 +157,63 @@ docker compose up --build
 | `GET` | `/api/v1/versions/hash/{hash}` | Détail d'une version, schéma et premières lignes échantillon |
 | `GET` | `/api/v1/versions/download/{hash}` | Télécharger le fichier physique `.parquet` |
 | `POST` | `/api/v1/transformations/apply/{source_id}` | Appliquer une transformation et dériver une nouvelle version |
+| `GET` | `/api/v1/versions/{version_hash}/profile` | Profil statistique complet d'une version (mis en cache) |
+| `PUT` | `/api/v1/versions/{version_hash}/target` | Définir et mémoriser la colonne cible d'une version |
+
+---
+
+## 📊 Module 01 : Profiling & Score de Santé IA
+
+Le module de profilage analyse en profondeur les caractéristiques structurelles, statistiques et de qualité de chaque version de dataset sans jamais recourir à des données simulées.
+
+### 1. Formules Mathématiques des 5 Sous-Scores (sur 100)
+
+Chaque sous-score est un indicateur objectif normalisé sur l'échelle 0 à 100 :
+
+1. **Complétude ($S_{\text{complétude}}$, Poids : 25%)** :
+   Mesure l'exhaustivité des cellules renseignées dans l'ensemble de la table :
+   $$S_{\text{complétude}} = 100 \times \left(1 - \frac{\sum_{j=1}^M \text{nulls}_j}{N \times M}\right)$$
+   *(où $N$ est le nombre de lignes et $M$ le nombre de colonnes)*
+
+2. **Unicité ($S_{\text{unicité}}$, Poids : 20%)** :
+   Mesure l'absence de redondance stricte de lignes :
+   $$S_{\text{unicité}} = 100 \times \left(1 - \frac{\text{nb\_lignes\_dupliquées}}{N}\right)$$
+
+3. **Validité ($S_{\text{validité}}$, Poids : 20%)** :
+   Mesure la proportion de colonnes exemptes d'anomalies critiques (taux d'absence élevé $>10\%$ ou présence de valeurs aberrantes hors clôtures de Tukey IQR) :
+   $$S_{\text{validité}} = 100 \times \left(1 - \frac{\text{nb\_colonnes\_avec\_anomalies}}{M}\right)$$
+
+4. **Cohérence ($S_{\text{cohérence}}$, Poids : 20%)** :
+   Mesure l'homogénéité orthographique et syntaxique des variables catégorielles. Une incohérence est détectée lorsque plusieurs modalités diffèrent uniquement par la casse, des espaces superflus ou des accents (ex. `["Casablanca", "casa", "CASABLANCA"]`) :
+   $$S_{\text{cohérence}} = 100 \times \left(1 - \frac{\text{nb\_colonnes\_catégorielles\_incohérentes}}{\text{nb\_colonnes\_catégorielles}}\right)$$
+   *(Vaut 100% si le jeu de données ne possède pas de colonnes catégorielles)*
+
+5. **Équilibre des classes ($S_{\text{équilibre}}$, Poids : 15%)** :
+   Mesuré via l'**Entropie de Shannon normalisée** de la variable cible discrète sélectionnée ($K \ge 2$ classes, fréquences empiriques $p_1, \dots, p_K$) :
+   $$S_{\text{équilibre}} = 100 \times \frac{-\sum_{k=1}^K p_k \log(p_k)}{\log(K)}$$
+   - Vaut 100% lorsque toutes les classes sont parfaitement équilibrées ($p_k = 1/K$).
+   - Vaut 41% pour une distribution binaire à 8% / 92% (comme dans le cas churn).
+   - Vaut 0% si une seule classe existe.
+   - **État vide (`—`)** : Si aucune colonne cible n'a encore été sélectionnée par l'utilisateur ou si la colonne sélectionnée est continue/numérique sans catégories finies, ce score n'est pas calculé arbitrairement.
+
+### 2. Score de Santé Global (Health Score / 100)
+
+Le score de santé global est la moyenne pondérée dynamique des sous-scores calculables :
+$$\text{Health Score} = \text{round}\left(\frac{\sum_{i \in \text{actifs}} w_i \times S_i}{\sum_{i \in \text{actifs}} w_i}\right)$$
+- Lorsque la cible est définie : $\sum w_i = 0.25 + 0.20 + 0.20 + 0.20 + 0.15 = 1.0$.
+- Lorsque la cible n'est pas définie : renormalisation automatique sur la somme des poids restants ($0.85$), sans inventer de valeur.
+
+### 3. Seuils de Gravité des Détections (« Ce qui demande votre attention »)
+
+Les anomalies sont catégorisées et triées par niveau d'impact :
+
+| Niveau | Règle / Seuil de Détection | Action Suggérée (Prévue pour Cleaning) |
+| :--- | :--- | :--- |
+| **`HIGH`** | • Déséquilibre de classe sévère : classe minoritaire $< 15\%$ ou entropie normalisée $< 50\%$<br>• Données manquantes critiques : colonne avec $> 10\%$ de valeurs nulles | `See options →` (Rééquilibrage / SMOTE)<br>`Fix →` (Imputation de valeurs) |
+| **`MEDIUM`** | • Valeurs aberrantes (outliers) : données en dehors des clôtures $[Q_1 - 1.5\text{IQR}, Q_3 + 1.5\text{IQR}]$<br>• Catégories incohérentes : collision de minuscules/majuscules/accents/espaces<br>• Données manquantes modérées : colonnes avec $0 < \text{nulls} \le 10\%$ | `Review →` (Inspection & bornage)<br>`Merge →` (Fusion de catégories)<br>`Fix →` (Imputation) |
+| **`LOW`** | • Lignes dupliquées : présence d'au moins une ligne doublon stricte ($> 0$)<br>• Déséquilibre léger : classe minoritaire entre $15\%$ et $35\%$ | `Remove →` (Déduplication)<br>`Review →` (Vérification) |
+
+---
 
 ---
 

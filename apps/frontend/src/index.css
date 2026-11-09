@@ -457,3 +457,152 @@ input:focus, textarea:focus, select:focus {
   color: var(--amber);
 }
 
+/* Health Score & Segmented Bars */
+.health-section {
+  display: flex;
+  align-items: center;
+  gap: 3.5rem;
+  padding: 1rem 0 2rem 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.health-score-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+}
+
+.health-number {
+  font-size: 4.5rem;
+  line-height: 1;
+  font-weight: 500;
+  color: var(--amber);
+  letter-spacing: -0.03em;
+}
+
+.health-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-top: 0.4rem;
+}
+
+.subscores-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  flex: 1;
+  max-width: 550px;
+}
+
+.subscore-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.subscore-label {
+  font-size: 0.82rem;
+  color: #d4d4d8;
+  min-width: 130px;
+}
+
+.segmented-bar {
+  display: flex;
+  align-items: center;
+  gap: 2.5px;
+  flex: 1;
+}
+
+.segment-block {
+  height: 12px;
+  width: 7px;
+  border-radius: 1px;
+  background-color: #242429;
+  transition: background-color 0.2s ease;
+}
+
+.segment-block.filled-amber {
+  background-color: var(--amber);
+}
+
+.segment-block.filled-red {
+  background-color: #fb7185;
+}
+
+.subscore-pct {
+  font-size: 0.82rem;
+  min-width: 38px;
+  text-align: right;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.subscore-pct.warning {
+  color: #fb7185;
+}
+
+/* Findings Section */
+.findings-section {
+  margin-bottom: 3rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2rem;
+}
+
+.finding-row {
+  display: grid;
+  grid-template-columns: 36px 72px 1fr auto;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid #1a1a1e;
+  transition: background-color 0.15s ease;
+}
+
+.finding-row:last-child {
+  border-bottom: none;
+}
+
+.severity-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.severity-high {
+  color: #fb7185;
+}
+
+.severity-medium {
+  color: var(--amber);
+}
+
+.severity-low {
+  color: var(--text-muted);
+}
+
+.finding-action-btn {
+  background: transparent;
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  padding: 0.45rem 1rem;
+  color: #a1a1aa;
+  font-size: 0.78rem;
+  cursor: not-allowed;
+  opacity: 0.75;
+  transition: all 0.15s ease;
+}
+
+.finding-action-btn:hover {
+  border-color: #3f3f46;
+  color: var(--text-main);
+}
+
+

@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { VersioningPage } from './pages/VersioningPage';
 import { ProfilingPage } from './pages/ProfilingPage';
 import { PlaceholderStep } from './pages/PlaceholderStep';
@@ -111,7 +112,8 @@ export const App: React.FC = () => {
           <TopBar />
           
           <main style={{ flex: 1, overflowY: 'auto' }}>
-            <Routes>
+            <ErrorBoundary>
+              <Routes>
               <Route path="/" element={<Navigate to="/versioning" replace />} />
               
               {/* 01. Profiling (Phase A Functional Module) */}
@@ -207,7 +209,8 @@ export const App: React.FC = () => {
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/versioning" replace />} />
             </Routes>
-          </main>
+          </ErrorBoundary>
+        </main>
         </div>
       </div>
     </BrowserRouter>

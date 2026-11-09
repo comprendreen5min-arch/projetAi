@@ -34,7 +34,7 @@ export const Sidebar: React.FC = () => {
         <div className="sidebar-label font-mono">PROJECT</div>
         <div className="project-selector">
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Prédiction de churn
+            Mon projet
           </span>
           <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
         </div>
