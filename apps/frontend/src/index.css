@@ -362,3 +362,98 @@ input:focus, textarea:focus, select:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
 }
+
+/* Profiling Column Grid & Cards */
+.columns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.column-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem 1.15rem;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 190px;
+  transition: border-color 0.15s ease;
+}
+
+.column-card:hover {
+  border-color: #333338;
+}
+
+.column-card.flagged {
+  border-color: rgba(251, 113, 133, 0.25);
+}
+
+.column-card-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-top: 15px solid #fb7185;
+  border-left: 15px solid transparent;
+}
+
+.mini-histogram {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 48px;
+  width: 100%;
+  margin: 0.85rem 0 0.6rem 0;
+  padding-bottom: 2px;
+  border-bottom: 1px solid #232328;
+}
+
+.mini-bar {
+  flex: 1;
+  background-color: #27272a;
+  border-radius: 1px 1px 0 0;
+  transition: height 0.2s ease, background-color 0.15s ease;
+  min-height: 2px;
+}
+
+.column-card:hover .mini-bar {
+  background-color: #3f3f46;
+}
+
+.column-card.flagged .mini-bar {
+  background-color: #4a4a52;
+}
+
+.filter-tab {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: color 0.15s;
+  letter-spacing: 0.05em;
+}
+
+.filter-tab:hover {
+  color: var(--text-main);
+}
+
+.filter-tab.active {
+  color: var(--text-main);
+  border-bottom: 2px solid var(--amber);
+}
+
+.filter-tab.active .tab-count {
+  color: var(--amber);
+}
+

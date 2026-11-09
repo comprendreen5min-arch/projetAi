@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { VersioningPage } from './pages/VersioningPage';
+import { ProfilingPage } from './pages/ProfilingPage';
 import { PlaceholderStep } from './pages/PlaceholderStep';
 import { ArrowRight, Download } from 'lucide-react';
 
@@ -113,17 +114,8 @@ export const App: React.FC = () => {
             <Routes>
               <Route path="/" element={<Navigate to="/versioning" replace />} />
               
-              {/* 01. Profiling */}
-              <Route
-                path="/profiling"
-                element={
-                  <PlaceholderStep
-                    stepNumber="01"
-                    title="Profilage des Données"
-                    description="Audit automatisé de la qualité des données, détection des valeurs manquantes, déséquilibres de classes et anomalies statistiques."
-                  />
-                }
-              />
+              {/* 01. Profiling (Phase A Functional Module) */}
+              <Route path="/profiling" element={<ProfilingPage />} />
 
               {/* 02. Cleaning */}
               <Route

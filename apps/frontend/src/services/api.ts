@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Dataset, DatasetVersion } from '../types';
+import { Dataset, DatasetVersion, VersionProfile } from '../types';
 
 const API_BASE = '/api/v1';
 
@@ -64,6 +64,11 @@ export const api = {
 
   async getVersionDetail(hash: string): Promise<DatasetVersion> {
     const res = await apiClient.get<DatasetVersion>(`/versions/hash/${hash}`);
+    return res.data;
+  },
+
+  async getVersionProfile(hash: string): Promise<VersionProfile> {
+    const res = await apiClient.get<VersionProfile>(`/versions/${hash}/profile`);
     return res.data;
   },
 

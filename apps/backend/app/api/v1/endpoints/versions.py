@@ -11,6 +11,7 @@ from app.models.dataset_version import DatasetVersion
 from app.schemas.version import DatasetVersionRead, DatasetVersionDetail
 from app.services.parquet_service import parquet_service
 from app.services.diff_service import diff_service
+from app.services.profiling_service import profiling_service
 
 router = APIRouter()
 
@@ -57,6 +58,34 @@ def get_version_by_hash(
         transformation_produced=version.transformation_produced,
         sample_rows=sample_rows,
     )
+
+
+@router.get("/{version_hash}/profile", response_model=Dict[str, Any])
+def get_version_profile(version_hash: str, db: Session = Depends(get_db)):
+    """Retrieves or computes the stored profiling metrics of an immutable version
+    (zero recalculation on repeat calls).
+    """
+    version = db.query(DatasetVersion).filter(DatasetVersion.version_hash == version_hash).first()
+    if not version:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Version '{version_hash}' introuvable.",
+        )
+
+    file_path = Path(version.storage_path)
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Fichier Parquet introuvable sur le disque.",
+        )
+
+    profile = profiling_service.get_or_create_profile(
+        dataset_id=str(version.dataset_id),
+        version_hash=version.version_hash,
+        parquet_path=file_path,
+    )
+    profile["dataset_name"] = version.dataset.name
+    return profile
 
 
 @router.get("/diff", response_model=Dict[str, Any])
