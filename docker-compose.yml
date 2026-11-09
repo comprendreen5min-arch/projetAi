@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: datalift-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-datalift}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datalift}
+      POSTGRES_DB: ${POSTGRES_DB:-datalift}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datalift -d datalift"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: datalift-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_USER=datalift
+      - POSTGRES_PASSWORD=datalift
+      - POSTGRES_DB=datalift
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgresql://datalift:datalift@postgres:5432/datalift
+    volumes:
+      - ./apps/backend:/app
+      - backend_storage:/app/storage/datasets
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: datalift-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  backend_storage:
+
