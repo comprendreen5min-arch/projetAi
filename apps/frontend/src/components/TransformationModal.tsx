@@ -64,23 +64,25 @@ export const TransformationModal: React.FC<TransformationModalProps> = ({
       <div className="modal-content">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <GitFork size={20} color="#8b5cf6" />
+            <GitFork size={18} color="var(--amber)" />
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Appliquer une Transformation</h3>
-              <p className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <h3 className="font-serif" style={{ fontSize: '1.2rem', fontWeight: 500 }}>
+                Appliquer une Transformation
+              </h3>
+              <p className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                 Depuis version parente: {version.version_hash.slice(0, 12)}...
               </p>
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
           {error && (
-            <div style={{ padding: '0.75rem 1rem', background: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.3)', borderRadius: 8, color: '#fca5a5', fontSize: '0.85rem', marginBottom: '1.25rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <AlertCircle size={16} />
+            <div style={{ padding: '0.75rem 1rem', background: 'rgba(244, 63, 94, 0.12)', border: '1px solid rgba(244, 63, 94, 0.35)', borderRadius: 6, color: '#fca5a5', fontSize: '0.82rem', marginBottom: '1.25rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <AlertCircle size={15} style={{ color: '#f43f5e', flexShrink: 0 }} />
               <span>{error}</span>
             </div>
           )}
@@ -103,7 +105,7 @@ export const TransformationModal: React.FC<TransformationModalProps> = ({
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
               />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
                 Syntaxe Pandas / NumExpr standard.
               </span>
             </div>
@@ -124,7 +126,7 @@ export const TransformationModal: React.FC<TransformationModalProps> = ({
                     <button
                       type="button"
                       key={c.name}
-                      className="badge badge-blue"
+                      className="badge badge-amber font-mono"
                       style={{ cursor: 'pointer', border: 'none' }}
                       onClick={() => {
                         const current = selectedColumns ? selectedColumns.split(',').map(s => s.trim()) : [];
@@ -142,21 +144,21 @@ export const TransformationModal: React.FC<TransformationModalProps> = ({
           )}
 
           {transformType === 'DROP_NULLS' && (
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
               Toutes les lignes contenant au moins un champ vide / NaN seront filtrées.
             </p>
           )}
 
-          <div style={{ backgroundColor: '#090e18', padding: '0.85rem', borderRadius: 8, border: '1px solid var(--border)', marginBottom: '1.5rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+          <div style={{ backgroundColor: '#0d0d0f', padding: '0.85rem', borderRadius: 6, border: '1px solid var(--border)', marginBottom: '1.5rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
             ℹ️ Cette opération générera un <strong>nouveau snapshot Parquet immuable</strong>. Un hash SHA-256 unique lui sera attribué. La version originale restera inchangée.
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem' }}>
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={loading}>
               Annuler
             </button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              <Play size={14} />
+              <Play size={13} />
               {loading ? 'Calcul en cours...' : 'Exécuter & Créer la Version'}
             </button>
           </div>
@@ -165,4 +167,3 @@ export const TransformationModal: React.FC<TransformationModalProps> = ({
     </div>
   );
 };
-

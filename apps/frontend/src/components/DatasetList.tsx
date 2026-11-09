@@ -21,32 +21,36 @@ export const DatasetList: React.FC<DatasetListProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Database size={18} color="#3b82f6" />
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 600 }}>Datasets IA ({datasets.length})</h2>
+          <Database size={16} color="var(--amber)" />
+          <h2 className="font-serif" style={{ fontSize: '1.2rem', fontWeight: 500 }}>
+            Datasets IA ({datasets.length})
+          </h2>
         </div>
         <button
           className="btn btn-primary"
-          style={{ fontSize: '0.8rem', padding: '0.45rem 0.9rem' }}
+          style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
           onClick={() => onOpenUpload()}
         >
-          <Plus size={16} />
+          <Plus size={14} />
           Nouveau Dataset
         </button>
       </div>
 
       {datasets.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '2.5rem 1.5rem' }}>
-          <Database size={36} color="var(--border)" style={{ margin: '0 auto 0.75rem auto' }} />
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.25rem' }}>Aucun dataset enregistré</h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-            Commencez par importer un fichier CSV pour créer un dataset et générer son premier Parquet.
+          <Database size={32} color="var(--border)" style={{ margin: '0 auto 0.75rem auto' }} />
+          <h3 className="font-serif" style={{ fontSize: '1.05rem', fontWeight: 500, marginBottom: '0.25rem' }}>
+            Aucun dataset enregistré
+          </h3>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+            Importez un fichier CSV pour créer un dataset et générer son premier Parquet.
           </p>
           <button className="btn btn-primary" onClick={() => onOpenUpload()}>
-            <Plus size={16} /> Importer un CSV
+            <Plus size={14} /> Importer un CSV
           </button>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
           {datasets.map((ds) => {
             const isSelected = selectedDataset?.id === ds.id;
             return (
@@ -55,35 +59,35 @@ export const DatasetList: React.FC<DatasetListProps> = ({
                 className="card"
                 style={{
                   cursor: 'pointer',
-                  borderColor: isSelected ? 'var(--border-highlight)' : 'var(--border)',
-                  backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-surface)',
-                  padding: '1rem 1.25rem',
+                  borderColor: isSelected ? 'var(--amber)' : 'var(--border)',
+                  backgroundColor: isSelected ? 'rgba(245, 158, 11, 0.04)' : 'var(--bg-surface)',
+                  padding: '1rem 1.15rem',
                 }}
                 onClick={() => onSelectDataset(ds)}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{ds.name}</span>
-                      <span className="badge badge-blue">
+                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{ds.name}</span>
+                      <span className="badge badge-amber font-mono">
                         <Layers size={11} />
                         {ds.version_count} {ds.version_count > 1 ? 'versions' : 'version'}
                       </span>
                     </div>
 
                     {ds.description && (
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.4rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.4rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {ds.description}
                       </p>
                     )}
 
-                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'flex', gap: '0.85rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                       <span>
-                        Mis à jour: {new Date(ds.updated_at).toLocaleDateString('fr-FR')}
+                        {new Date(ds.updated_at).toLocaleDateString('fr-FR')}
                       </span>
                       {ds.latest_version && (
-                        <span className="font-mono">
-                          Dernier hash: {ds.latest_version.version_hash.slice(0, 8)}
+                        <span className="font-mono" style={{ color: 'var(--amber)' }}>
+                          #{ds.latest_version.version_hash.slice(0, 8)}
                         </span>
                       )}
                     </div>
@@ -92,7 +96,7 @@ export const DatasetList: React.FC<DatasetListProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.75rem' }}>
                     <button
                       className="btn btn-danger"
-                      style={{ padding: '0.35rem 0.5rem', borderRadius: 6 }}
+                      style={{ padding: '0.35rem 0.5rem', borderRadius: 4 }}
                       title="Supprimer le dataset"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -101,9 +105,9 @@ export const DatasetList: React.FC<DatasetListProps> = ({
                         }
                       }}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
-                    <ChevronRight size={18} color={isSelected ? 'var(--accent-blue)' : 'var(--text-muted)'} />
+                    <ChevronRight size={16} color={isSelected ? 'var(--amber)' : 'var(--text-muted)'} />
                   </div>
                 </div>
               </div>
@@ -114,4 +118,3 @@ export const DatasetList: React.FC<DatasetListProps> = ({
     </div>
   );
 };
-
