@@ -103,6 +103,7 @@ export interface ProfileSummary {
   health_score: number;
   sub_scores: SubScores;
   score_weights?: Record<string, number>;
+  version_number?: number;
 }
 
 export interface FindingItem {
@@ -123,6 +124,27 @@ export interface VersionProfile {
   dataset_name?: string;
   original_filename?: string;
   version_hash: string;
+  version_number?: number;
+}
+
+export interface CategoryMappingItem {
+  column?: string;
+  from: string;
+  to: string;
+  rows: number;
+  reason?: string;
+  is_uncertain?: boolean;
+  applied_by_default?: boolean;
+}
+
+export interface CategoryResponse {
+  column: string;
+  normalized: boolean;
+  categories: Array<{ value: string; count: number }>;
+  total_unique: number;
+  safe_mappings?: CategoryMappingItem[];
+  auto_mapping_dict?: Record<string, string>;
+  uncertain_mappings?: CategoryMappingItem[];
 }
 
 export type CleaningOperationType =

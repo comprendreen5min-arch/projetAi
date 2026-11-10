@@ -30,7 +30,7 @@ class CleaningPreviewResponse(BaseModel):
     cells_changed: int = 0
     cells_changed_percentage: float = 0.0
     predicted_health_score: Optional[int] = None
-    predicted_sub_scores: Optional[Dict[str, float]] = None
+    predicted_sub_scores: Optional[Dict[str, Optional[float]]] = None
     is_noop: bool
     target_affected: bool
     target_warning: Optional[str] = None
@@ -61,5 +61,5 @@ class CleaningApplyResponse(BaseModel):
     before_profile: Dict[str, Any]
     after_profile: Dict[str, Any]
     health_score_delta: int
-    sub_scores_delta: Dict[str, float]
+    sub_scores_delta: Dict[str, Optional[float]]
 
