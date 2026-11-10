@@ -124,6 +124,25 @@ export const ProfilingPage: React.FC = () => {
     }
   };
 
+  const handleFindingAction = (item: any) => {
+    let operation = 'duplicates';
+    if (item.action_type === 'fix') operation = 'missing';
+    else if (item.action_type === 'review') operation = 'outliers';
+    else if (item.action_type === 'merge') operation = 'categories';
+    else if (item.action_type === 'remove') operation = 'duplicates';
+    else if (item.action_type === 'options') operation = 'missing';
+
+    const colParam = item.column ? `&col=${encodeURIComponent(item.column)}` : '';
+    navigate(`/cleaning?dataset=${selectedDatasetId}&version=${selectedVersionHash}&op=${operation}${colParam}`, {
+      state: {
+        datasetId: selectedDatasetId,
+        versionHash: selectedVersionHash,
+        operation,
+        column: item.column,
+      },
+    });
+  };
+
   const getFilteredColumns = (): ColumnProfile[] => {
     if (!profile || !profile.columns) return [];
     switch (activeFilter) {
@@ -259,7 +278,7 @@ export const ProfilingPage: React.FC = () => {
             type="button"
             className="btn btn-primary"
             style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
-            onClick={() => navigate('/cleaning')}
+            onClick={() => navigate(`/cleaning?dataset=${selectedDatasetId}&version=${selectedVersionHash}`)}
           >
             <span>Passer au Nettoyage</span>
             <ArrowRight size={14} />
@@ -445,13 +464,13 @@ export const ProfilingPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Action Button (Disabled with tooltip) */}
+                    {/* Action Button - Active and navigates to Cleaning with prefilled params */}
                     <div>
                       <button
                         type="button"
                         className="finding-action-btn font-mono"
-                        disabled
-                        title="Disponible à l’étape Cleaning"
+                        onClick={() => handleFindingAction(item)}
+                        title={`Ouvrir dans l’étape Cleaning (${item.action_label})`}
                       >
                         {item.action_label}
                       </button>

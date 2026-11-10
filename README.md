@@ -159,6 +159,9 @@ docker compose up --build
 | `POST` | `/api/v1/transformations/apply/{source_id}` | Appliquer une transformation et dériver une nouvelle version |
 | `GET` | `/api/v1/versions/{version_hash}/profile` | Profil statistique complet d'une version (mis en cache) |
 | `PUT` | `/api/v1/versions/{version_hash}/target` | Définir et mémoriser la colonne cible d'une version |
+| `POST` | `/api/v1/cleaning/{version_hash}/preview` | Simuler un lot d'opérations de nettoyage (lignes touchées, diffs, avertissements) |
+| `POST` | `/api/v1/cleaning/{version_hash}/apply` | Appliquer les opérations, créer la version immuable et retourner l'évolution du score |
+| `GET` | `/api/v1/cleaning/{version_hash}/categories` | Lister les catégories uniques d'une colonne avec décomptes |
 
 ---
 
@@ -214,6 +217,40 @@ Les anomalies sont catégorisées et triées par niveau d'impact :
 | **`LOW`** | • Lignes dupliquées : présence d'au moins une ligne doublon stricte ($> 0$)<br>• Déséquilibre léger : classe minoritaire entre $15\%$ et $35\%$ | `Remove →` (Déduplication)<br>`Review →` (Vérification) |
 
 ---
+
+---
+
+## 🧹 Module 02 : Nettoyage Déterministe & Immuabilité (Cleaning)
+
+Le module de nettoyage applique un ensemble d'opérations d'assainissement tout en préservant l'immuabilité et la reproductibilité mathématique stricte.
+
+### 1. Ordre d'Exécution Fixe et Déterministe d'un Lot d'Opérations
+Lorsqu'un lot d'opérations est soumis (ou accumulé dans la file d'attente), le moteur backend le trie selon un ordre déterministe invariable :
+1. **Normalisation des Textes (`TEXT_NORMALIZE`)** : passage en minuscules, suppression des espaces superflus (strip) et retrait des accents (diacritiques Unicode).
+2. **Fusion Manuelle des Catégories (`CATEGORY_MERGE`)** : regroupement de libellés vers une modalité cible (ex: `casa` $\rightarrow$ `casablanca`), s'exécutant sur les valeurs déjà normalisées.
+3. **Traitement des Valeurs Manquantes (`HANDLE_MISSING`)** :
+   - Suppression des lignes (`drop`)
+   - Imputation statistique : moyenne (`mean`), médiane (`median`) — *strictement réservées aux colonnes numériques*
+   - Imputation catégorielle : mode / modalité la plus fréquente (`mode`), ou valeur fixe (`constant`)
+4. **Traitement des Valeurs Aberrantes (`HANDLE_OUTLIERS`)** :
+   - Basé sur les clôtures de Tukey IQR : $[Q_1 - 1.5\text{IQR}, Q_3 + 1.5\text{IQR}]$
+   - Plafonnement aux bornes (`clip`), suppression (`drop`) ou conservation (`keep`)
+5. **Suppression des Doublons Stricts (`DROP_DUPLICATES`)** en dernier :
+   - Définition stricte : ligne identique sur l'intégralité des colonnes
+   - Conservation de la première (`first`) ou de la dernière (`last`) occurrence
+
+### 2. Calcul Déterministe du Hash Logique
+Le hash de la nouvelle version ne dépend **jamais des octets bruts du fichier Parquet** (qui peuvent varier selon l'horodatage ou la compression de la bibliothèque), mais du contenu logique strict :
+$$\text{data\_hash} = \text{SHA256}(\text{Canonical CSV format}(df\text{ ordonné}))$$
+$$\text{version\_hash} = \text{SHA256}(\text{parent\_hash} + \text{opérations\_et\_paramètres\_calculés} + \text{data\_hash})$$
+
+Les paramètres stockés dans la table `Transformation` contiennent les **valeurs exactes calculées lors de l'exécution** (médiane précise utilisée, bornes IQR numériques appliquées, mapping effectif, etc.).
+
+### 3. Règles d'Intégrité
+- **Écriture Atomique** : le fichier Parquet physique, la ligne `DatasetVersion` et l'enregistrement `Transformation` sont validés ensemble en base de données ou annulés intégralement en cas d'erreur.
+- **Protection de la Colonne Cible** : si une opération modifie la distribution des classes de la colonne cible (par suppression de lignes), un avertissement explicite est levé et la confirmation `confirm_target_modification=True` est requise.
+- **Détection No-Op** : si un lot d'opérations n'altère aucune ligne (0 modification), aucune nouvelle version n'est créée et l'utilisateur en est averti.
+- **Précalcul du Profil** : le profil statistique et les scores de santé de chaque nouvelle version sont calculés et enregistrés dès sa création pour un affichage instantané.
 
 ---
 

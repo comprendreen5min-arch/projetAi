@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { VersioningPage } from './pages/VersioningPage';
 import { ProfilingPage } from './pages/ProfilingPage';
+import { CleaningPage } from './pages/CleaningPage';
 import { PlaceholderStep } from './pages/PlaceholderStep';
 import { ArrowRight, Download } from 'lucide-react';
 
@@ -77,24 +78,48 @@ const TopBar: React.FC = () => {
 
       {/* Action buttons */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <button
-          type="button"
-          className="btn btn-secondary font-mono"
-          style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
-          onClick={() => alert("Génération du rapport d'audit (bientôt disponible).")}
-        >
-          <Download size={13} />
-          Rapport d'audit
-        </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
-          onClick={handleNextStep}
-        >
-          <span>Étape suivante</span>
-          <ArrowRight size={14} />
-        </button>
+        {location.pathname === '/cleaning' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:export-recipe'))}
+            >
+              Export recipe
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => navigate('/augmentation')}
+            >
+              <span>Continue to augmentation</span>
+              <ArrowRight size={14} />
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => alert("Génération du rapport d'audit (bientôt disponible).")}
+            >
+              <Download size={13} />
+              Rapport d'audit
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={handleNextStep}
+            >
+              <span>Étape suivante</span>
+              <ArrowRight size={14} />
+            </button>
+          </>
+        )}
       </div>
     </header>
   );
@@ -120,16 +145,7 @@ export const App: React.FC = () => {
               <Route path="/profiling" element={<ProfilingPage />} />
 
               {/* 02. Cleaning */}
-              <Route
-                path="/cleaning"
-                element={
-                  <PlaceholderStep
-                    stepNumber="02"
-                    title="Nettoyage & Correction"
-                    description="Correction des incohérences syntaxiques, déduplication et imputation guidée des valeurs aberrantes."
-                  />
-                }
-              />
+              <Route path="/cleaning" element={<CleaningPage />} />
 
               {/* 03. Augmentation */}
               <Route

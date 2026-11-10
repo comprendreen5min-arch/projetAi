@@ -66,6 +66,33 @@ class TargetUpdateRequest(BaseModel):
     target_column: Optional[str] = None
 
 
+def resolve_original_filename(version: DatasetVersion) -> str:
+    """Finds the true uploaded source filename by inspecting current version's
+    transformation or traversing parent lineage up to the root ingestion.
+    """
+    curr = version
+    while curr:
+        if curr.transformation_produced and curr.transformation_produced.parameters:
+            fn = curr.transformation_produced.parameters.get("filename") or curr.transformation_produced.parameters.get("original_filename")
+            if fn:
+                return fn
+        if not curr.parent_version_id:
+            break
+        curr = curr.parent_version
+
+    if version.dataset and version.dataset.versions:
+        for v in version.dataset.versions:
+            if v.parent_version_id is None and v.transformation_produced and v.transformation_produced.parameters:
+                fn = v.transformation_produced.parameters.get("filename") or v.transformation_produced.parameters.get("original_filename")
+                if fn:
+                    return fn
+
+    if version.dataset and version.dataset.name:
+        name = version.dataset.name
+        return name if name.endswith(".csv") else f"{name}.csv"
+    return "dataset.csv"
+
+
 @router.get("/{version_hash}/profile", response_model=Dict[str, Any])
 def get_version_profile(
     version_hash: str,
@@ -89,12 +116,8 @@ def get_version_profile(
             detail="Fichier Parquet introuvable sur le disque.",
         )
 
-    # Extract original source filename from transformation parameters
-    original_filename = None
-    if version.transformation_produced and version.transformation_produced.parameters:
-        original_filename = version.transformation_produced.parameters.get("filename")
-    if not original_filename:
-        original_filename = f"{version.dataset.name}.csv"
+    # Extract original source filename from transformation parameters or lineage
+    original_filename = resolve_original_filename(version)
 
     profile = profiling_service.get_or_create_profile(
         dataset_id=str(version.dataset_id),
@@ -129,11 +152,7 @@ def update_version_target(
             detail="Fichier Parquet introuvable sur le disque.",
         )
 
-    original_filename = None
-    if version.transformation_produced and version.transformation_produced.parameters:
-        original_filename = version.transformation_produced.parameters.get("filename")
-    if not original_filename:
-        original_filename = f"{version.dataset.name}.csv"
+    original_filename = resolve_original_filename(version)
 
     # Recompute and memorize the updated target in the version cache
     profile = profiling_service.get_or_create_profile(

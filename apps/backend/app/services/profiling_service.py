@@ -28,6 +28,7 @@ class ProfilingService:
         Returns (has_inconsistencies, list_of_example_variants, count_of_inconsistent_rows).
         """
         non_null = series.dropna().astype(str)
+        non_null = non_null[non_null.str.strip() != ""]
         if len(non_null) == 0:
             return False, [], 0
 
@@ -385,27 +386,27 @@ class ProfilingService:
 
         return findings
 
-    def profile_parquet_file(
+    def profile_dataframe(
         self,
-        parquet_path: Path,
+        df: pd.DataFrame,
         target_column: Optional[str] = None,
         original_filename: Optional[str] = None,
+        file_size_bytes: int = 0,
     ) -> Dict[str, Any]:
-        """Calculates comprehensive Phase A + Phase B profiling metrics on a Parquet file."""
-        if not parquet_path.exists():
-            raise FileNotFoundError(f"Fichier Parquet introuvable: {parquet_path}")
+        """Calculates comprehensive Phase A + Phase B profiling metrics directly on a DataFrame."""
+        working_df = df.copy()
+        # Treat empty strings and whitespace-only strings as missing values (NaN) for textual columns
+        for col in working_df.columns:
+            if working_df[col].dtype == "object" or pd.api.types.is_string_dtype(working_df[col]):
+                working_df[col] = working_df[col].replace(r"^\s*$", np.nan, regex=True)
 
-        table = pq.read_table(parquet_path)
-        df = table.to_pandas()
-
-        total_rows = len(df)
-        total_columns = len(df.columns)
-        file_size_bytes = parquet_path.stat().st_size
-        duplicate_rows_count = int(df.duplicated().sum())
+        total_rows = len(working_df)
+        total_columns = len(working_df.columns)
+        duplicate_rows_count = int(working_df.duplicated().sum())
 
         # Determine target column: use explicit selection or auto-detect
         if not target_column:
-            for col in df.columns:
+            for col in working_df.columns:
                 if col.lower().strip() in ["target", "label", "churn", "churned", "is_churn", "y", "default", "outcome"]:
                     target_column = col
                     break
@@ -415,8 +416,8 @@ class ProfilingService:
         numeric_count = 0
         category_count = 0
 
-        for col_name in df.columns:
-            series = df[col_name]
+        for col_name in working_df.columns:
+            series = working_df[col_name]
             col_type = self.detect_column_type(col_name, series, total_rows, target_col=target_column)
 
             if col_type == "nombre":
@@ -515,7 +516,7 @@ class ProfilingService:
 
         # Calculate Phase B Scores
         scores_data = self.calculate_sub_scores(
-            df=df,
+            df=working_df,
             total_rows=total_rows,
             duplicate_rows_count=duplicate_rows_count,
             columns_profile=columns_profile,
@@ -524,7 +525,7 @@ class ProfilingService:
 
         # Generate Phase B Findings
         findings = self.generate_findings(
-            df=df,
+            df=working_df,
             total_rows=total_rows,
             duplicate_rows_count=duplicate_rows_count,
             columns_profile=columns_profile,
@@ -546,10 +547,32 @@ class ProfilingService:
                 "health_score": scores_data["health_score"],
                 "sub_scores": scores_data["sub_scores"],
                 "score_weights": scores_data["weights"],
+                "schema_version": 2,
             },
             "findings": findings,
             "columns": columns_profile,
+            "original_filename": original_filename,
         }
+
+    def profile_parquet_file(
+        self,
+        parquet_path: Path,
+        target_column: Optional[str] = None,
+        original_filename: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Calculates comprehensive Phase A + Phase B profiling metrics on a Parquet file."""
+        if not parquet_path.exists():
+            raise FileNotFoundError(f"Fichier Parquet introuvable: {parquet_path}")
+
+        table = pq.read_table(parquet_path)
+        df = table.to_pandas()
+        file_size_bytes = parquet_path.stat().st_size
+        return self.profile_dataframe(
+            df=df,
+            target_column=target_column,
+            original_filename=original_filename,
+            file_size_bytes=file_size_bytes,
+        )
 
     def get_or_create_profile(
         self,
@@ -571,19 +594,21 @@ class ProfilingService:
                 with open(profile_cache_file, "r", encoding="utf-8") as f:
                     cached_data = json.load(f)
                     
-                    # Ensure cached data contains full Phase B diagnostic fields
+                    # Ensure cached data contains full Phase B diagnostic fields and schema_version 2 (empty strings fix)
                     has_phase_b = (
                         "findings" in cached_data
                         and isinstance(cached_data.get("findings"), list)
                         and "health_score" in cached_data.get("summary", {})
                         and "sub_scores" in cached_data.get("summary", {})
+                        and cached_data.get("summary", {}).get("schema_version") == 2
                     )
                     
                     if has_phase_b:
                         cached_target = cached_data.get("summary", {}).get("target_column")
                         if target_column is None or target_column == cached_target:
-                            if original_filename and not cached_data.get("summary", {}).get("original_filename"):
+                            if original_filename:
                                 cached_data["summary"]["original_filename"] = original_filename
+                                cached_data["original_filename"] = original_filename
                             return cached_data
             except Exception:
                 pass
