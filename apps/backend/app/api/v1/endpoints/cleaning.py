@@ -175,10 +175,45 @@ def get_column_categories(
         series = series.apply(cleaning_service.normalize_text_value)
 
     vc = series.value_counts().head(50)
+
+    # Compute deterministic safe mappings and uncertain mappings for this column
+    raw_series = df[column].dropna().astype(str)
+    raw_series = raw_series[raw_series.str.strip() != ""]
+    val_counts = raw_series.value_counts().to_dict()
+
+    norm_groups: Dict[str, List[tuple]] = {}
+    for val, count in val_counts.items():
+        norm = cleaning_service.normalize_text_value(val)
+        if norm not in norm_groups:
+            norm_groups[norm] = []
+        norm_groups[norm].append((val, count))
+
+    safe_mappings: List[Dict[str, Any]] = []
+    auto_mapping_dict: Dict[str, str] = {}
+    for norm, members in norm_groups.items():
+        if len(members) > 1:
+            # Sort by count descending, canonical is the majority variant
+            sorted_m = sorted(members, key=lambda x: x[1], reverse=True)
+            canonical = sorted_m[0][0].strip()
+            for variant, cnt in sorted_m[1:]:
+                safe_mappings.append({
+                    "column": column,
+                    "from": variant,
+                    "to": canonical,
+                    "rows": int(cnt),
+                    "is_uncertain": False,
+                })
+                auto_mapping_dict[variant] = canonical
+
+    uncertain_mappings = cleaning_service.detect_uncertain_category_mappings(df, column)
+
     return {
         "column": column,
         "normalized": normalized,
         "categories": [{"value": str(k), "count": int(v)} for k, v in vc.items()],
         "total_unique": int(series.nunique()),
+        "safe_mappings": safe_mappings,
+        "auto_mapping_dict": auto_mapping_dict,
+        "uncertain_mappings": uncertain_mappings,
     }
 

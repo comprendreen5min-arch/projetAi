@@ -59,6 +59,60 @@ class CleaningService:
             s = unicodedata.normalize("NFKD", s).encode("ASCII", "ignore").decode("utf-8")
         return s
 
+    def detect_uncertain_category_mappings(self, df: pd.DataFrame, col: str) -> List[Dict[str, Any]]:
+        """Detects uncertain mappings such as abbreviations or prefix matches
+        (e.g. 'casa' for 'Casablanca') with their exact row counts.
+        These are NEVER applied automatically and require explicit user validation.
+        """
+        if col not in df.columns:
+            return []
+
+        series = df[col].dropna().astype(str)
+        series = series[series.str.strip() != ""]
+        if len(series) == 0:
+            return []
+
+        val_counts = series.value_counts().to_dict()
+        # Find dominant canonical names (clean, stripped, with significant representation)
+        raw_canonical = {}
+        for val, count in val_counts.items():
+            clean = val.strip()
+            if len(clean) >= 5 and count >= 5:
+                # Keep the cleanly capitalized variant with highest count
+                if clean not in raw_canonical or count > raw_canonical[clean][1]:
+                    raw_canonical[clean] = (val, count)
+
+        canonical_candidates = list(raw_canonical.keys())
+
+        uncertain_mappings = []
+        seen_from = set()
+        for val, count in val_counts.items():
+            clean_v = val.strip()
+            norm_v = self.normalize_text_value(clean_v)
+            if len(norm_v) < 3 or clean_v in seen_from:
+                continue
+
+            for candidate in canonical_candidates:
+                clean_c = candidate.strip()
+                norm_c = self.normalize_text_value(clean_c)
+                if norm_c == norm_v:
+                    continue
+
+                # Strict prefix match where candidate is notably longer (e.g. 'casa' -> 'Casablanca')
+                if norm_c.startswith(norm_v) and len(norm_c) >= len(norm_v) + 3:
+                    seen_from.add(clean_v)
+                    uncertain_mappings.append({
+                        "column": col,
+                        "from": val,
+                        "to": clean_c,
+                        "rows": int(count),
+                        "reason": f"Abréviation ou préfixe probable de '{clean_c}'",
+                        "is_uncertain": True,
+                        "applied_by_default": False,
+                    })
+                    break
+        return uncertain_mappings
+
     def sort_operations(self, operations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Sorts operations into the fixed documented pipeline sequence:
         1. normalisation des textes
@@ -140,18 +194,6 @@ class CleaningService:
                 if cells_modified > 0:
                     columns_affected_set.add(col)
                 total_rows_affected += cells_modified
-                total_cells_changed += cells_modified
-
-                if cells_modified > 0:
-                    changed_m = old_col.astype(str) != working_df[col].astype(str)
-                    diff_pairs = pd.DataFrame({"before": old_col[changed_m], "after": working_df[col][changed_m]})
-                    for (b_val, a_val), cnt in diff_pairs.value_counts().items():
-                        step_diffs["categories"].append({
-                            "column": col,
-                            "before": str(b_val),
-                            "after": str(a_val),
-                            "rows": int(cnt),
-                        })
                 total_cells_changed += cells_modified
 
                 if cells_modified > 0:
@@ -497,15 +539,13 @@ class CleaningService:
         cells_changed = result["total_cells_changed"]
         cells_changed_pct = round((cells_changed / total_table_cells) * 100, 1)
 
-        # Detect uncertain mappings if city has ambiguous spellings
+        # Detect real uncertain mappings on categorical columns (e.g. 'casa' for 'Casablanca')
+        # These are never applied automatically
         uncertain_mappings = []
-        city_diffs = result["step_diffs"].get("categories", [])
-        if any(d.get("column") == "city" for d in city_diffs):
-            uncertain_mappings.append({
-                "from": "Sale",
-                "to": "Salé",
-                "reason": "Différence d'accentuation en attente de revue manuelle",
-            })
+        for col_name in df.columns:
+            if df[col_name].dtype == "object" or pd.api.types.is_string_dtype(df[col_name]):
+                col_uncertain = self.detect_uncertain_category_mappings(df, col_name)
+                uncertain_mappings.extend(col_uncertain)
 
         result["cells_changed"] = cells_changed
         result["cells_changed_percentage"] = cells_changed_pct

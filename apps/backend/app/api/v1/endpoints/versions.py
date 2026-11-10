@@ -93,6 +93,18 @@ def resolve_original_filename(version: DatasetVersion) -> str:
     return "dataset.csv"
 
 
+def resolve_version_depth(version: DatasetVersion) -> int:
+    """Calculates 1-based lineage depth of an immutable version (root ingestion = 1)."""
+    depth = 1
+    curr = version
+    visited = set()
+    while curr and curr.parent_version_id and curr.id not in visited:
+        visited.add(curr.id)
+        depth += 1
+        curr = curr.parent_version
+    return depth
+
+
 @router.get("/{version_hash}/profile", response_model=Dict[str, Any])
 def get_version_profile(
     version_hash: str,
@@ -118,6 +130,7 @@ def get_version_profile(
 
     # Extract original source filename from transformation parameters or lineage
     original_filename = resolve_original_filename(version)
+    version_number = resolve_version_depth(version)
 
     profile = profiling_service.get_or_create_profile(
         dataset_id=str(version.dataset_id),
@@ -126,8 +139,12 @@ def get_version_profile(
         target_column=target_column,
         original_filename=original_filename,
     )
-    profile["dataset_name"] = version.dataset.name
+    profile["dataset_name"] = version.dataset.name if version.dataset else None
     profile["original_filename"] = original_filename
+    profile["version_number"] = version_number
+    if "summary" in profile:
+        profile["summary"]["version_number"] = version_number
+        profile["summary"]["original_filename"] = original_filename
     return profile
 
 

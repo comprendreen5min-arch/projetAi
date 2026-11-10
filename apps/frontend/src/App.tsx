@@ -46,7 +46,7 @@ const TopBar: React.FC = () => {
             borderBottom: '2px solid var(--amber)',
           }}
         >
-          Tabular
+          Tabulaire
         </button>
         <button
           type="button"
@@ -59,7 +59,7 @@ const TopBar: React.FC = () => {
           }}
           title="Bientôt disponible"
         >
-          Text
+          Texte
         </button>
         <button
           type="button"
@@ -86,7 +86,7 @@ const TopBar: React.FC = () => {
               style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
               onClick={() => window.dispatchEvent(new CustomEvent('datalift:export-recipe'))}
             >
-              Export recipe
+              Exporter la recette
             </button>
             <button
               type="button"
@@ -94,7 +94,7 @@ const TopBar: React.FC = () => {
               style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
               onClick={() => navigate('/augmentation')}
             >
-              <span>Continue to augmentation</span>
+              <span>Continuer vers l'augmentation</span>
               <ArrowRight size={14} />
             </button>
           </>

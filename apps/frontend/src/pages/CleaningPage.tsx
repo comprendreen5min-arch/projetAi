@@ -8,6 +8,8 @@ import {
   CleaningOperation,
   CleaningPreviewResponse,
   StepDiffItem,
+  CategoryResponse,
+  CategoryMappingItem,
 } from '../types';
 import {
   RefreshCw,
@@ -37,40 +39,41 @@ export const CleaningPage: React.FC = () => {
   const [versions, setVersions] = useState<DatasetVersion[]>([]);
   const [selectedVersionHash, setSelectedVersionHash] = useState<string>(navState.versionHash || '');
   const [profile, setProfile] = useState<VersionProfile | null>(null);
+  const [categoriesData, setCategoriesData] = useState<CategoryResponse | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [simulating, setSimulating] = useState<boolean>(false);
   const [applying, setApplying] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
-  // Recipe Step Configurations & Toggles
-  // Step 01: Duplicates
+  // Recipe Step Configurations & Toggles (Enabled by default ONLY if the issue exists!)
+  // Step 01: Doublons
   const [step01Active, setStep01Active] = useState<boolean>(true);
   const [step01Keep, setStep01Keep] = useState<'first' | 'last'>('first');
 
-  // Step 02: Missing values
+  // Step 02: Valeurs manquantes
   const [step02Active, setStep02Active] = useState<boolean>(true);
   const [step02Strategy, setStep02Strategy] = useState<'median_mode' | 'drop' | 'constant'>('median_mode');
 
-  // Step 03: Inconsistent categories
+  // Step 03: Catégories incohérentes
   const [step03Active, setStep03Active] = useState<boolean>(true);
-  const [step03Mapping, setStep03Mapping] = useState<'auto' | 'normalize_only' | 'custom'>('auto');
+  const [step03MappingStrategy, setStep03MappingStrategy] = useState<'auto' | 'normalize_only'>('auto');
+  // Uncertain mappings validated by the user (NEVER applied by default)
+  const [selectedUncertainMatches, setSelectedUncertainMatches] = useState<Record<string, boolean>>({});
 
-  // Step 04: Outliers
+  // Step 04: Outliers (IQR)
   const [step04Active, setStep04Active] = useState<boolean>(true);
   const [step04Method, setStep04Method] = useState<'cap_iqr' | 'drop' | 'keep'>('cap_iqr');
 
-  // Currently Previewed Step: '01' | '02' | '03' | '04' | '05' (Default: '03' as in mockup)
-  const [activePreviewStep, setActivePreviewStep] = useState<'01' | '02' | '03' | '04' | '05'>('03');
+  // Active Preview Step tab
+  const [activePreviewStep, setActivePreviewStep] = useState<'01' | '02' | '03' | '04' | '05'>('01');
 
-  // Simulation Preview Result from Backend
+  // Simulation Preview Result from Backend (/preview)
   const [previewData, setPreviewData] = useState<CleaningPreviewResponse | null>(null);
 
-  // Export Recipe Modal
+  // Modals
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
   const [copiedRecipe, setCopiedRecipe] = useState<boolean>(false);
-
-  // Add Manual Step Modal
   const [showManualModal, setShowManualModal] = useState<boolean>(false);
   const [manualStepType, setManualStepType] = useState<string>('DROP_COLUMN');
   const [manualStepCol, setManualStepCol] = useState<string>('');
@@ -116,10 +119,11 @@ export const CleaningPage: React.FC = () => {
           ? preferredHash
           : vers[0].version_hash;
         setSelectedVersionHash(targetHash);
-        await loadProfile(targetHash);
+        await loadProfileAndCategories(targetHash);
       } else {
         setSelectedVersionHash('');
         setProfile(null);
+        setCategoriesData(null);
         setLoading(false);
       }
     } catch (err) {
@@ -128,10 +132,35 @@ export const CleaningPage: React.FC = () => {
     }
   };
 
-  const loadProfile = async (hash: string) => {
+  const loadProfileAndCategories = async (hash: string) => {
     try {
       const prof = await api.getVersionProfile(hash);
       setProfile(prof);
+
+      // Find inconsistent categorical column
+      const inconsistentCol = prof.columns.find((c) => c.inconsistent_examples && c.inconsistent_examples.length > 0);
+      const catColName = inconsistentCol ? inconsistentCol.name : 'city';
+
+      try {
+        const catRes = await api.getColumnCategories(hash, catColName);
+        setCategoriesData(catRes);
+      } catch (catErr) {
+        console.warn('Impossible de charger les catégories pour', catColName, catErr);
+        setCategoriesData(null);
+      }
+
+      // Default active preview step based on available issues
+      if (prof.summary.duplicate_rows_count > 0) {
+        setActivePreviewStep('01');
+      } else if (prof.columns.some((c) => c.null_percentage > 0)) {
+        setActivePreviewStep('02');
+      } else if (inconsistentCol) {
+        setActivePreviewStep('03');
+      } else if (prof.columns.some((c) => c.outlier_count > 0)) {
+        setActivePreviewStep('04');
+      } else {
+        setActivePreviewStep('01');
+      }
     } catch (err) {
       console.error('Erreur chargement profil:', err);
     } finally {
@@ -143,6 +172,7 @@ export const CleaningPage: React.FC = () => {
     const newId = e.target.value;
     setSelectedDatasetId(newId);
     setPreviewData(null);
+    setSelectedUncertainMatches({});
     loadVersions(newId);
   };
 
@@ -150,26 +180,30 @@ export const CleaningPage: React.FC = () => {
     const newHash = e.target.value;
     setSelectedVersionHash(newHash);
     setPreviewData(null);
-    loadProfile(newHash);
+    setSelectedUncertainMatches({});
+    loadProfileAndCategories(newHash);
   };
 
-  // Profile-derived context variables
+  // Profile-derived real variables
   const originalFileName = useMemo(() => {
     if (profile?.original_filename) return profile.original_filename;
     if (profile?.dataset_name) return `${profile.dataset_name}.csv`;
-    return 'customer_churn.csv';
+    return 'données.csv';
   }, [profile]);
 
-  const currentVersionIndex = useMemo(() => {
+  // Real 1-based version lineage index
+  const versionNumber = useMemo(() => {
+    if (profile?.summary?.version_number) return profile.summary.version_number;
+    if (profile?.version_number) return profile.version_number;
     if (!versions.length || !selectedVersionHash) return 1;
     const idx = versions.findIndex((v) => v.version_hash === selectedVersionHash);
     return idx >= 0 ? versions.length - idx : 1;
-  }, [versions, selectedVersionHash]);
+  }, [profile, versions, selectedVersionHash]);
 
-  const nextVersionLabel = `v${currentVersionIndex + 1}`;
-  const currentVersionLabel = `v${currentVersionIndex}`;
+  const currentVersionLabel = `v${versionNumber}`;
+  const nextVersionLabel = `v${versionNumber + 1}`;
 
-  // Findings & Columns analysis from Profile
+  // Column findings from real profile
   const duplicateRowsCount = profile?.summary?.duplicate_rows_count || 0;
 
   const missingColumns = useMemo(() => {
@@ -186,18 +220,79 @@ export const CleaningPage: React.FC = () => {
     return profile.columns.find((c) => c.inconsistent_examples && c.inconsistent_examples.length > 0);
   }, [profile]);
 
-  const outlierColumn = useMemo(() => {
-    if (!profile) return null;
-    return profile.columns.find((c) => c.outlier_count > 0);
+  const outlierColumns = useMemo(() => {
+    if (!profile) return [];
+    return profile.columns.filter((c) => c.outlier_count > 0);
   }, [profile]);
 
-  const targetCol = profile?.summary?.target_column || 'churned';
+  const totalOutliersCount = useMemo(() => {
+    return outlierColumns.reduce((sum, c) => sum + c.outlier_count, 0);
+  }, [outlierColumns]);
 
-  // Build Operations Pipeline from the 4 Toggled Steps
+  const targetCol = profile?.summary?.target_column;
+  const isTargetImbalanced = useMemo(() => {
+    if (!profile || !targetCol) return false;
+    const cb = profile.summary?.sub_scores?.class_balance;
+    return cb !== null && cb !== undefined && cb < 50;
+  }, [profile, targetCol]);
+
+  // Safe mappings and uncertain mappings for categories (e.g. city)
+  const safeMappings: CategoryMappingItem[] = useMemo(() => {
+    if (categoriesData?.safe_mappings && categoriesData.safe_mappings.length > 0) {
+      return categoriesData.safe_mappings;
+    }
+    return [];
+  }, [categoriesData]);
+
+  const safeMappingDict: Record<string, string> = useMemo(() => {
+    if (categoriesData?.auto_mapping_dict) {
+      return categoriesData.auto_mapping_dict;
+    }
+    const d: Record<string, string> = {};
+    safeMappings.forEach((m) => {
+      d[m.from] = m.to;
+    });
+    return d;
+  }, [categoriesData, safeMappings]);
+
+  const uncertainMappings: CategoryMappingItem[] = useMemo(() => {
+    if (categoriesData?.uncertain_mappings && categoriesData.uncertain_mappings.length > 0) {
+      return categoriesData.uncertain_mappings;
+    }
+    return [];
+  }, [categoriesData]);
+
+  const safeRowsCount = useMemo(() => {
+    return safeMappings.reduce((sum, m) => sum + m.rows, 0);
+  }, [safeMappings]);
+
+  // Check if any cleaning issues exist at all
+  const hasIssuesToClean = useMemo(() => {
+    return (
+      duplicateRowsCount > 0 ||
+      missingColumns.length > 0 ||
+      Boolean(inconsistentCatColumn) ||
+      outlierColumns.length > 0 ||
+      isTargetImbalanced
+    );
+  }, [duplicateRowsCount, missingColumns, inconsistentCatColumn, outlierColumns, isTargetImbalanced]);
+
+  // Applicable steps count
+  const applicableStepsCount = useMemo(() => {
+    let count = 0;
+    if (duplicateRowsCount > 0) count++;
+    if (missingColumns.length > 0) count++;
+    if (inconsistentCatColumn) count++;
+    if (outlierColumns.length > 0) count++;
+    if (isTargetImbalanced) count++;
+    return count;
+  }, [duplicateRowsCount, missingColumns, inconsistentCatColumn, outlierColumns, isTargetImbalanced]);
+
+  // Build Real Operations Pipeline from Enabled Steps
   const buildActiveOperations = useCallback((): CleaningOperation[] => {
     const ops: CleaningOperation[] = [];
 
-    // Step 01: DROP_DUPLICATES
+    // Step 01: Suppression des doublons (ONLY if duplicates exist)
     if (step01Active && duplicateRowsCount > 0) {
       ops.push({
         id: 'op-dup',
@@ -206,7 +301,7 @@ export const CleaningPage: React.FC = () => {
       });
     }
 
-    // Step 02: HANDLE_MISSING
+    // Step 02: Valeurs manquantes (ONLY if missing columns exist)
     if (step02Active && missingColumns.length > 0) {
       missingColumns.forEach((col) => {
         if (step02Strategy === 'drop') {
@@ -236,7 +331,7 @@ export const CleaningPage: React.FC = () => {
       });
     }
 
-    // Step 03: Inconsistent categories
+    // Step 03: Catégories incohérentes (ONLY if inconsistent categories exist)
     if (step03Active && inconsistentCatColumn) {
       // 1. Text normalize
       ops.push({
@@ -246,39 +341,43 @@ export const CleaningPage: React.FC = () => {
         parameters: { lowercase: true, strip: true, remove_accents: true },
       });
 
-      // 2. Category merge for known inconsistent examples (e.g. casa -> casablanca, fes -> fès)
-      const mergeMapping: Record<string, string> = {
-        casa: 'Casablanca',
-        casablanca: 'Casablanca',
-        marrakech: 'Marrakech',
-        rabat: 'Rabat',
-        fes: 'Fès',
-      };
-      ops.push({
-        id: `op-merge-${inconsistentCatColumn.name}`,
-        type: 'CATEGORY_MERGE',
-        column: inconsistentCatColumn.name,
-        parameters: { mapping: mergeMapping },
+      // 2. Category merge: safe mappings + explicitly user-validated uncertain mappings
+      const finalMapping: Record<string, string> = { ...safeMappingDict };
+      uncertainMappings.forEach((u) => {
+        if (selectedUncertainMatches[u.from]) {
+          finalMapping[u.from] = u.to;
+        }
       });
-    }
 
-    // Step 04: Outliers
-    if (step04Active && outlierColumn) {
-      if (step04Method === 'drop') {
+      if (Object.keys(finalMapping).length > 0) {
         ops.push({
-          id: `op-outlier-${outlierColumn.name}`,
-          type: 'HANDLE_OUTLIERS',
-          column: outlierColumn.name,
-          parameters: { strategy: 'drop' },
-        });
-      } else if (step04Method === 'cap_iqr') {
-        ops.push({
-          id: `op-outlier-${outlierColumn.name}`,
-          type: 'HANDLE_OUTLIERS',
-          column: outlierColumn.name,
-          parameters: { strategy: 'clip' },
+          id: `op-merge-${inconsistentCatColumn.name}`,
+          type: 'CATEGORY_MERGE',
+          column: inconsistentCatColumn.name,
+          parameters: { mapping: finalMapping },
         });
       }
+    }
+
+    // Step 04: Outliers IQR (ONLY if outlier columns exist)
+    if (step04Active && outlierColumns.length > 0) {
+      outlierColumns.forEach((col) => {
+        if (step04Method === 'drop') {
+          ops.push({
+            id: `op-outlier-${col.name}`,
+            type: 'HANDLE_OUTLIERS',
+            column: col.name,
+            parameters: { strategy: 'drop' },
+          });
+        } else if (step04Method === 'cap_iqr') {
+          ops.push({
+            id: `op-outlier-${col.name}`,
+            type: 'HANDLE_OUTLIERS',
+            column: col.name,
+            parameters: { strategy: 'clip' },
+          });
+        }
+      });
     }
 
     return ops;
@@ -291,9 +390,12 @@ export const CleaningPage: React.FC = () => {
     missingColumns,
     step03Active,
     inconsistentCatColumn,
+    safeMappingDict,
+    uncertainMappings,
+    selectedUncertainMatches,
     step04Active,
     step04Method,
-    outlierColumn,
+    outlierColumns,
   ]);
 
   // Run Backend Simulation / Preview
@@ -331,18 +433,20 @@ export const CleaningPage: React.FC = () => {
 
   // Auto re-simulate when options or switches toggle
   useEffect(() => {
-    if (selectedVersionHash && profile) {
+    if (selectedVersionHash && profile && hasIssuesToClean) {
       runSimulation();
     }
   }, [
     selectedVersionHash,
     profile,
+    hasIssuesToClean,
     step01Active,
     step01Keep,
     step02Active,
     step02Strategy,
     step03Active,
-    step03Mapping,
+    step03MappingStrategy,
+    selectedUncertainMatches,
     step04Active,
     step04Method,
     runSimulation,
@@ -364,12 +468,12 @@ export const CleaningPage: React.FC = () => {
         selectedVersionHash,
         ops,
         profile?.summary.target_column || null,
-        true // confirm target modification if any
+        true
       );
 
       setFeedbackMsg({
         type: 'success',
-        text: `Version immuable ${nextVersionLabel} (#${res.new_version_hash.slice(0, 8)}) créée avec succès ! Score de santé : ${res.after_profile.summary.health_score}/100 (${res.health_score_delta >= 0 ? '+' : ''}${res.health_score_delta} pts).`,
+        text: `Version immuable ${nextVersionLabel} (#${res.new_version_hash.slice(0, 8)}) créée avec succès ! ${res.rows_before} → ${res.rows_after} lignes. Score de santé : ${res.after_profile.summary.health_score}/100 (${res.health_score_delta >= 0 ? '+' : ''}${res.health_score_delta} pts).`,
       });
 
       // Reload versions and switch to the newly created version
@@ -385,54 +489,75 @@ export const CleaningPage: React.FC = () => {
   };
 
   // Active steps count
-  const activeStepsCount = [step01Active, step02Active, step03Active, step04Active].filter(Boolean).length;
+  const activeStepsCount = useMemo(() => {
+    let count = 0;
+    if (duplicateRowsCount > 0 && step01Active) count++;
+    if (missingColumns.length > 0 && step02Active) count++;
+    if (inconsistentCatColumn && step03Active) count++;
+    if (outlierColumns.length > 0 && step04Active) count++;
+    return count;
+  }, [duplicateRowsCount, step01Active, missingColumns, step02Active, inconsistentCatColumn, step03Active, outlierColumns, step04Active]);
 
-  // Real or simulated stats
-  const rowsBefore = profile?.summary?.total_rows || 248610;
+  // True stats derived strictly from profile and previewData (NO hardcoding!)
+  const rowsBefore = profile?.summary?.total_rows || 0;
   const rowsAfter = previewData?.rows_after ?? (step01Active && duplicateRowsCount > 0 ? rowsBefore - duplicateRowsCount : rowsBefore);
-  const totalColumns = profile?.summary?.total_columns || 21;
-  const cellsChanged = previewData?.cells_changed ?? (step01Active ? duplicateRowsCount * totalColumns : 0) + (step02Active ? totalMissingCells : 0) + (step03Active ? (inconsistentCatColumn?.inconsistent_rows_count || 0) : 0);
-  const cellsChangedPct = previewData?.cells_changed_percentage ?? (rowsBefore > 0 ? Number(((cellsChanged / (rowsBefore * totalColumns)) * 100).toFixed(1)) : 0.7);
+  const totalColumns = profile?.summary?.total_columns || 0;
+  const cellsChanged = previewData?.cells_changed ?? 0;
+  const cellsChangedPct = previewData?.cells_changed_percentage ?? (rowsBefore > 0 && totalColumns > 0 ? Number(((cellsChanged / (rowsBefore * totalColumns)) * 100).toFixed(1)) : 0.0);
 
-  // Health Score before and after
-  const healthScoreBefore = profile?.summary?.health_score || 72;
-  const healthScoreAfter = previewData?.predicted_health_score ?? Math.min(100, healthScoreBefore + (activeStepsCount > 0 ? 15 : 0));
+  // Health Score before and after (NO hardcoded 72 or 87!)
+  const healthScoreBefore = profile?.summary?.health_score ?? 0;
+  const healthScoreAfter = previewData?.predicted_health_score ?? healthScoreBefore;
 
   // Sub-scores before and after
   const subBefore = profile?.summary?.sub_scores || {
-    completeness: 94,
-    uniqueness: 98,
-    validity: 86,
-    consistency: 91,
-    class_balance: 41,
+    completeness: 0,
+    uniqueness: 0,
+    validity: 0,
+    consistency: 0,
+    class_balance: null,
   };
 
-  const subAfter = previewData?.predicted_sub_scores || {
-    completeness: step02Active ? 100 : subBefore.completeness,
-    uniqueness: step01Active ? 100 : subBefore.uniqueness,
-    validity: step04Active ? 94 : subBefore.validity,
-    consistency: step03Active ? 99 : subBefore.consistency,
-    class_balance: subBefore.class_balance,
-  };
+  const subAfter = previewData?.predicted_sub_scores || subBefore;
 
-  // Preview table data for the selected step
+  // Preview table data for the selected step strictly from backend data
   const previewDiffItems: StepDiffItem[] = useMemo(() => {
     if (activePreviewStep === '03') {
       const serverDiffs = previewData?.step_diffs?.categories;
       if (serverDiffs && serverDiffs.length > 0) return serverDiffs;
-      return [
-        { column: 'city', before: 'casa', after: 'Casablanca', rows: 1214 },
-        { column: 'city', before: 'CASABLANCA', after: 'Casablanca', rows: 803 },
-        { column: 'city', before: 'Fes', after: 'Fès', rows: 412 },
-        { column: 'city', before: 'Rabat.', after: 'Rabat', rows: 96 },
-      ];
+      // Derived from actual detected safe mappings and selected uncertain matches
+      const items: StepDiffItem[] = safeMappings.map((m) => ({
+        column: m.column || inconsistentCatColumn?.name || 'city',
+        before: m.from,
+        after: m.to,
+        rows: m.rows,
+      }));
+      uncertainMappings.forEach((u) => {
+        if (selectedUncertainMatches[u.from]) {
+          items.push({
+            column: u.column || inconsistentCatColumn?.name || 'city',
+            before: u.from,
+            after: u.to,
+            rows: u.rows,
+          });
+        }
+      });
+      return items;
     }
     if (activePreviewStep === '01') {
       const serverDiffs = previewData?.step_diffs?.duplicates;
       if (serverDiffs && serverDiffs.length > 0) return serverDiffs;
-      return [
-        { column: 'Toutes', before: `${duplicateRowsCount} lignes en doublon`, after: `Occurrence '${step01Keep}' conservée`, rows: duplicateRowsCount },
-      ];
+      if (duplicateRowsCount > 0) {
+        return [
+          {
+            column: 'Toutes les colonnes',
+            before: `${duplicateRowsCount} lignes identiques en doublon`,
+            after: `Occurrence '${step01Keep === 'first' ? 'première' : 'dernière'}' conservée`,
+            rows: duplicateRowsCount,
+          },
+        ];
+      }
+      return [];
     }
     if (activePreviewStep === '02') {
       const serverDiffs = previewData?.step_diffs?.missing;
@@ -440,57 +565,69 @@ export const CleaningPage: React.FC = () => {
       return missingColumns.map((col) => ({
         column: col.name,
         before: 'null / vide',
-        after: col.detected_type === 'nombre' ? 'Médiane calculée' : 'Mode / Catégorie majoritaire',
+        after:
+          step02Strategy === 'drop'
+            ? '— (lignes supprimées)'
+            : col.detected_type === 'nombre'
+            ? 'Médiane calculée'
+            : 'Mode / Valeur fréquente',
         rows: col.null_count,
       }));
     }
     if (activePreviewStep === '04') {
       const serverDiffs = previewData?.step_diffs?.outliers;
       if (serverDiffs && serverDiffs.length > 0) return serverDiffs;
+      return outlierColumns.map((col) => ({
+        column: col.name,
+        before: `${col.outlier_count} valeurs hors clôtures IQR`,
+        after: step04Method === 'drop' ? '— (lignes supprimées)' : 'Plafonné aux clôtures [Q1-1.5IQR ; Q3+1.5IQR]',
+        rows: col.outlier_count,
+      }));
+    }
+    // Step 05: Target
+    if (targetCol) {
       return [
         {
-          column: outlierColumn?.name || 'monthly_charges',
-          before: 'Valeurs hors bornes IQR',
-          after: 'Borné aux clôtures [Q1-1.5IQR ; Q3+1.5IQR]',
-          rows: outlierColumn?.outlier_count || 1984,
+          column: targetCol,
+          before: 'Déséquilibre de classe détecté',
+          after: 'Délégué à l’étape 03 Augmentation (rééchantillonnage après train/test split)',
+          rows: 0,
         },
       ];
     }
-    // Step 05 (Balance the target)
-    return [
-      {
-        column: targetCol,
-        before: 'Déséquilibre 8% minoritaire',
-        after: 'Délégué à l’étape 03 Augmentation (SMOTE / Resampling)',
-        rows: 0,
-      },
-    ];
+    return [];
   }, [
     activePreviewStep,
     previewData,
+    safeMappings,
+    uncertainMappings,
+    selectedUncertainMatches,
+    inconsistentCatColumn,
     duplicateRowsCount,
     step01Keep,
     missingColumns,
-    outlierColumn,
+    step02Strategy,
+    outlierColumns,
+    step04Method,
     targetCol,
   ]);
 
   const activeStepTitle = useMemo(() => {
     switch (activePreviewStep) {
       case '01':
-        return '01 · REMOVE DUPLICATE ROWS';
+        return '01 · SUPPRESSION DES DOUBLONS';
       case '02':
-        return '02 · FILL MISSING VALUES';
+        return '02 · IMPUTATION DES VALEURS MANQUANTES';
       case '03':
-        return '03 · MERGE INCONSISTENT CITY SPELLINGS';
+        return `03 · FUSION DES VARIANTES DE ${inconsistentCatColumn?.name?.toUpperCase() || 'CITY'}`;
       case '04':
-        return '04 · CAP OUTLIERS IN MONTHLY_CHARGES';
+        return '04 · PLAFONNEMENT DES VALEURS ABERRANTES (IQR)';
       case '05':
-        return '05 · BALANCE THE TARGET';
+        return '05 · ÉQUILIBRAGE DE LA VARIABLE CIBLE';
       default:
-        return 'PREVIEW';
+        return 'APERÇU';
     }
-  }, [activePreviewStep]);
+  }, [activePreviewStep, inconsistentCatColumn]);
 
   // Export Recipe JSON content
   const recipeExportJson = useMemo(() => {
@@ -561,10 +698,10 @@ export const CleaningPage: React.FC = () => {
       {/* Meta Breadcrumb & Dataset switcher */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div className="font-mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          DATASET · {currentVersionLabel} RAW → {nextVersionLabel} DRAFT · 5 STEPS FROM PROFILING
+          JEU DE DONNÉES · {currentVersionLabel.toUpperCase()} INITIALE → NOUVELLE VERSION {nextVersionLabel.toUpperCase()} · {applicableStepsCount} ÉTAPE{applicableStepsCount > 1 ? 'S' : ''} ISSUE{applicableStepsCount > 1 ? 'S' : ''} DU PROFILAGE
         </div>
 
-        {/* Subtle Dataset / Version Switchers */}
+        {/* Dataset & Version Switchers */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <span className="font-mono" style={{ color: 'var(--text-muted)' }}>JEU DE DONNÉES :</span>
@@ -590,7 +727,7 @@ export const CleaningPage: React.FC = () => {
             >
               {versions.map((v, i) => (
                 <option key={v.id} value={v.version_hash}>
-                  #{v.version_hash.slice(0, 8)} {i === 0 ? '(Dernière)' : ''}
+                  #{v.version_hash.slice(0, 8)} {i === 0 ? '(Dernière)' : ''} — {v.row_count.toLocaleString('fr-FR')} lignes
                 </option>
               ))}
             </select>
@@ -626,55 +763,55 @@ export const CleaningPage: React.FC = () => {
           borderBottom: '1px solid #1e1e23',
         }}
       >
-        {/* Metric 1: ROWS */}
+        {/* Metric 1: LIGNES */}
         <div>
           <div className="font-mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>
-            ROWS
+            LIGNES
           </div>
           <div className="font-mono" style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--text-main)' }}>
-            {rowsAfter.toLocaleString('en-US')}
+            {rowsAfter.toLocaleString('fr-FR')}
           </div>
           <div className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-            was {rowsBefore.toLocaleString('en-US')}
+            au lieu de {rowsBefore.toLocaleString('fr-FR')}
           </div>
         </div>
 
-        {/* Metric 2: COLUMNS */}
+        {/* Metric 2: COLONNES */}
         <div>
           <div className="font-mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>
-            COLUMNS
+            COLONNES
           </div>
           <div className="font-mono" style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--text-main)' }}>
             {totalColumns}
           </div>
           <div className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-            no change
+            inchangé
           </div>
         </div>
 
-        {/* Metric 3: CELLS CHANGED */}
+        {/* Metric 3: CELLULES MODIFIÉES */}
         <div>
           <div className="font-mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>
-            CELLS CHANGED
+            CELLULES MODIFIÉES
           </div>
           <div className="font-mono" style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--text-main)' }}>
-            {cellsChanged.toLocaleString('en-US')}
+            {cellsChanged.toLocaleString('fr-FR')}
           </div>
           <div className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-            {cellsChangedPct}% of the table
+            {cellsChangedPct}% de la table
           </div>
         </div>
 
-        {/* Metric 4: OUTPUT */}
+        {/* Metric 4: SORTIE */}
         <div>
           <div className="font-mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>
-            OUTPUT
+            SORTIE
           </div>
           <div className="font-mono" style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--text-main)' }}>
             {nextVersionLabel}
           </div>
           <div className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-            {currentVersionLabel} kept as is
+            {currentVersionLabel} conservée telle quelle
           </div>
         </div>
 
@@ -695,7 +832,7 @@ export const CleaningPage: React.FC = () => {
                 {healthScoreBefore}
               </span>
               <div className="font-mono" style={{ fontSize: '0.62rem', color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: '0.35rem' }}>
-                BEFORE
+                AVANT
               </div>
             </div>
 
@@ -718,317 +855,347 @@ export const CleaningPage: React.FC = () => {
                 {healthScoreAfter}
               </span>
               <div className="font-mono" style={{ fontSize: '0.62rem', color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: '0.35rem' }}>
-                HEALTH AFTER / 100
+                SANTÉ APRÈS / 100
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Cleaning Recipe Section */}
-      <div style={{ marginBottom: '3rem' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <h2 className="font-serif" style={{ fontSize: '1.75rem', fontWeight: 400, color: 'var(--text-main)' }}>
-            Cleaning recipe
-          </h2>
-          <div className="font-mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
-            {activeStepsCount} OF 4 STEPS ON · RUNS TOP TO BOTTOM
-          </div>
+      {/* Cleaning Recipe Section or Empty State */}
+      {!hasIssuesToClean ? (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '4rem 2rem',
+            background: '#131316',
+            border: '1px solid #222227',
+            borderRadius: 8,
+            marginBottom: '3rem',
+          }}
+        >
+          <CheckCircle2 size={46} color="#4ade80" style={{ margin: '0 auto 1.25rem auto' }} />
+          <h3 className="font-serif" style={{ fontSize: '1.85rem', fontWeight: 400, marginBottom: '0.6rem' }}>
+            Aucun problème détecté
+          </h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '540px', margin: '0 auto 1.75rem auto', lineHeight: 1.5 }}>
+            Ce jeu de données est parfaitement propre : aucun doublon, aucune valeur manquante, aucune incohérence de casse ou d'accent et aucun outlier critique.
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary font-mono"
+            onClick={() => navigate('/augmentation')}
+          >
+            <span>Passer à l'étape suivante : Augmentation</span>
+            <ArrowRight size={14} />
+          </button>
         </div>
-
-        {/* Steps List */}
-        <div className="cleaning-recipe-container">
-          {/* Step 01: Remove duplicate rows */}
-          <div className={`recipe-card ${activePreviewStep === '01' ? 'active-preview' : ''}`}>
-            <div className="recipe-toggle-wrapper">
-              <span className="recipe-step-num">01</span>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={step01Active}
-                  onChange={(e) => setStep01Active(e.target.checked)}
-                />
-                <span className="slider"></span>
-              </label>
-            </div>
-
-            <div className="recipe-text-block">
-              <div className="recipe-title">
-                Remove {duplicateRowsCount > 0 ? duplicateRowsCount : 412} duplicate rows
-              </div>
-              <div className="recipe-subtitle">
-                Same customer_id and same values in every column
-              </div>
-            </div>
-
-            <div className="recipe-controls-block">
-              <div className="recipe-select-group">
-                <span className="recipe-control-label">KEEP</span>
-                <select
-                  className="recipe-select font-mono"
-                  value={step01Keep}
-                  onChange={(e) => setStep01Keep(e.target.value as any)}
-                >
-                  <option value="first">First occurrence</option>
-                  <option value="last">Last occurrence</option>
-                </select>
-              </div>
-
-              <div className="recipe-stat-number">
-                -{duplicateRowsCount > 0 ? duplicateRowsCount : 412} rows
-              </div>
-
-              <button
-                type="button"
-                className={`preview-action-btn ${activePreviewStep === '01' ? 'active' : ''}`}
-                onClick={() => setActivePreviewStep('01')}
-              >
-                <span>{activePreviewStep === '01' ? 'Previewing' : 'Preview →'}</span>
-              </button>
+      ) : (
+        <div style={{ marginBottom: '3rem' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+            <h2 className="font-serif" style={{ fontSize: '1.75rem', fontWeight: 400, color: 'var(--text-main)' }}>
+              Recette de nettoyage
+            </h2>
+            <div className="font-mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+              {activeStepsCount} SUR {applicableStepsCount} ÉTAPE{applicableStepsCount > 1 ? 'S' : ''} ACTIVE{applicableStepsCount > 1 ? 'S' : ''} · EXÉCUTION DE HAUT EN BAS
             </div>
           </div>
 
-          {/* Step 02: Fill missing values */}
-          <div className={`recipe-card ${activePreviewStep === '02' ? 'active-preview' : ''}`}>
-            <div className="recipe-toggle-wrapper">
-              <span className="recipe-step-num">02</span>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={step02Active}
-                  onChange={(e) => setStep02Active(e.target.checked)}
-                />
-                <span className="slider"></span>
-              </label>
-            </div>
+          {/* Steps List (Only rendered if issue actually exists!) */}
+          <div className="cleaning-recipe-container">
+            {/* Step 01: Doublons (Condition: duplicateRowsCount > 0) */}
+            {duplicateRowsCount > 0 && (
+              <div className={`recipe-card ${activePreviewStep === '01' ? 'active-preview' : ''}`}>
+                <div className="recipe-toggle-wrapper">
+                  <span className="recipe-step-num">01</span>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={step01Active}
+                      onChange={(e) => setStep01Active(e.target.checked)}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
 
-            <div className="recipe-text-block">
-              <div className="recipe-title">
-                Fill missing values in {missingColumns.length > 0 ? missingColumns.length : 3} columns
-              </div>
-              <div className="recipe-subtitle">
-                {missingColumns.length > 0
-                  ? missingColumns.map((c) => `${c.name} ${c.null_percentage}%`).join(' · ')
-                  : 'income 11.4% · city 1.8% · age 0.2%'}
-              </div>
-            </div>
+                <div className="recipe-text-block">
+                  <div className="recipe-title">
+                    Supprimer {duplicateRowsCount} ligne{duplicateRowsCount > 1 ? 's' : ''} dupliquée{duplicateRowsCount > 1 ? 's' : ''}
+                  </div>
+                  <div className="recipe-subtitle">
+                    Lignes strictement identiques sur l'ensemble des colonnes
+                  </div>
+                </div>
 
-            <div className="recipe-controls-block">
-              <div className="recipe-select-group">
-                <span className="recipe-control-label">STRATEGY</span>
-                <select
-                  className="recipe-select font-mono"
-                  value={step02Strategy}
-                  onChange={(e) => setStep02Strategy(e.target.value as any)}
-                >
-                  <option value="median_mode">Median by city · mode</option>
-                  <option value="drop">Supprimer les lignes</option>
-                  <option value="constant">Valeur fixe</option>
-                </select>
-              </div>
+                <div className="recipe-controls-block">
+                  <div className="recipe-select-group">
+                    <span className="recipe-control-label">CONSERVER</span>
+                    <select
+                      className="recipe-select font-mono"
+                      value={step01Keep}
+                      onChange={(e) => setStep01Keep(e.target.value as any)}
+                    >
+                      <option value="first">Première occurrence</option>
+                      <option value="last">Dernière occurrence</option>
+                    </select>
+                  </div>
 
-              <div className="recipe-stat-number">
-                {totalMissingCells > 0 ? totalMissingCells.toLocaleString('en-US') : '33,314'} cells
-              </div>
+                  <div className="recipe-stat-number">
+                    -{duplicateRowsCount} lignes
+                  </div>
 
-              <button
-                type="button"
-                className={`preview-action-btn ${activePreviewStep === '02' ? 'active' : ''}`}
-                onClick={() => setActivePreviewStep('02')}
-              >
-                <span>{activePreviewStep === '02' ? 'Previewing' : 'Preview →'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Step 03: Merge inconsistent city spellings (Active Highlight) */}
-          <div className={`recipe-card ${activePreviewStep === '03' ? 'active-preview' : ''}`}>
-            <div className="recipe-toggle-wrapper">
-              <span className="recipe-step-num">03</span>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={step03Active}
-                  onChange={(e) => setStep03Active(e.target.checked)}
-                />
-                <span className="slider"></span>
-              </label>
-            </div>
-
-            <div className="recipe-text-block">
-              <div className="recipe-title">
-                Merge inconsistent {inconsistentCatColumn?.name || 'city'} spellings
-              </div>
-              <div className="recipe-subtitle">
-                {inconsistentCatColumn
-                  ? `${inconsistentCatColumn.unique_count} spellings → trim, case, accents`
-                  : '57 spellings → 41 cities · trim, case, accents'}
-              </div>
-            </div>
-
-            <div className="recipe-controls-block">
-              <div className="recipe-select-group">
-                <span className="recipe-control-label">MAPPING</span>
-                <select
-                  className="recipe-select font-mono"
-                  value={step03Mapping}
-                  onChange={(e) => setStep03Mapping(e.target.value as any)}
-                >
-                  <option value="auto">Auto · 4 to review</option>
-                  <option value="normalize_only">Normalisation seule</option>
-                  <option value="custom">Manuel</option>
-                </select>
-              </div>
-
-              <div className="recipe-stat-number">
-                {inconsistentCatColumn?.inconsistent_rows_count
-                  ? inconsistentCatColumn.inconsistent_rows_count.toLocaleString('en-US')
-                  : '3,482'}{' '}
-                cells
-              </div>
-
-              <button
-                type="button"
-                className={`preview-action-btn ${activePreviewStep === '03' ? 'active' : ''}`}
-                onClick={() => setActivePreviewStep('03')}
-              >
-                <span>{activePreviewStep === '03' ? 'Previewing' : 'Preview →'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Step 04: Cap outliers in monthly_charges */}
-          <div className={`recipe-card ${activePreviewStep === '04' ? 'active-preview' : ''}`}>
-            <div className="recipe-toggle-wrapper">
-              <span className="recipe-step-num">04</span>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={step04Active}
-                  onChange={(e) => setStep04Active(e.target.checked)}
-                />
-                <span className="slider"></span>
-              </label>
-            </div>
-
-            <div className="recipe-text-block">
-              <div className="recipe-title">
-                Cap outliers in {outlierColumn?.name || 'monthly_charges'}
-              </div>
-              <div className="recipe-subtitle">
-                {outlierColumn
-                  ? `${outlierColumn.outlier_count} values outside the 1st–99th percentile (IQR)`
-                  : '1,904 values outside the 1st–99th percentile'}
-              </div>
-            </div>
-
-            <div className="recipe-controls-block">
-              <div className="recipe-select-group">
-                <span className="recipe-control-label">METHOD</span>
-                <select
-                  className="recipe-select font-mono"
-                  value={step04Method}
-                  onChange={(e) => setStep04Method(e.target.value as any)}
-                >
-                  <option value="cap_iqr">Cap at p1 / p99</option>
-                  <option value="drop">Supprimer outliers</option>
-                  <option value="keep">Conserver</option>
-                </select>
-              </div>
-
-              <div className="recipe-stat-number">
-                {outlierColumn ? outlierColumn.outlier_count.toLocaleString('en-US') : '1,984'} cells
-              </div>
-
-              <button
-                type="button"
-                className={`preview-action-btn ${activePreviewStep === '04' ? 'active' : ''}`}
-                onClick={() => setActivePreviewStep('04')}
-              >
-                <span>{activePreviewStep === '04' ? 'Previewing' : 'Preview →'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Step 05: Balance the target (LATER) */}
-          <div className={`recipe-card ${activePreviewStep === '05' ? 'active-preview' : ''}`}>
-            <div className="recipe-toggle-wrapper">
-              <span className="recipe-step-num">05</span>
-              <span className="badge-later">LATER</span>
-            </div>
-
-            <div className="recipe-text-block">
-              <div className="recipe-title">
-                Balance the target · {targetCol} = yes in 8%
-              </div>
-              <div className="recipe-subtitle">
-                Moved to Augmentation: resampling happens after the train/test split
-              </div>
-            </div>
-
-            <div className="recipe-controls-block">
-              <div className="recipe-select-group">
-                <span className="recipe-control-label">HANDLED IN</span>
-                <div
-                  className="font-mono"
-                  style={{
-                    background: '#18181c',
-                    border: '1px solid #2a2a30',
-                    color: '#e4e4e7',
-                    padding: '0.35rem 0.7rem',
-                    borderRadius: 4,
-                    fontSize: '0.78rem',
-                  }}
-                >
-                  03 Augmentation
+                  <button
+                    type="button"
+                    className={`preview-action-btn ${activePreviewStep === '01' ? 'active' : ''}`}
+                    onClick={() => setActivePreviewStep('01')}
+                  >
+                    <span>{activePreviewStep === '01' ? "En cours d'aperçu" : 'Aperçu →'}</span>
+                  </button>
                 </div>
               </div>
+            )}
 
-              <div className="recipe-stat-number" style={{ color: 'var(--text-muted)' }}>
-                Next step
+            {/* Step 02: Valeurs manquantes (Condition: missingColumns.length > 0) */}
+            {missingColumns.length > 0 && (
+              <div className={`recipe-card ${activePreviewStep === '02' ? 'active-preview' : ''}`}>
+                <div className="recipe-toggle-wrapper">
+                  <span className="recipe-step-num">02</span>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={step02Active}
+                      onChange={(e) => setStep02Active(e.target.checked)}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+
+                <div className="recipe-text-block">
+                  <div className="recipe-title">
+                    Imputer les valeurs manquantes dans {missingColumns.length} colonne{missingColumns.length > 1 ? 's' : ''}
+                  </div>
+                  <div className="recipe-subtitle">
+                    {missingColumns.map((c) => `${c.name} (${c.null_count} nulls, ${c.null_percentage}%)`).join(' · ')}
+                  </div>
+                </div>
+
+                <div className="recipe-controls-block">
+                  <div className="recipe-select-group">
+                    <span className="recipe-control-label">STRATÉGIE</span>
+                    <select
+                      className="recipe-select font-mono"
+                      value={step02Strategy}
+                      onChange={(e) => setStep02Strategy(e.target.value as any)}
+                    >
+                      <option value="median_mode">Médiane (numériques) / Mode (catégories)</option>
+                      <option value="drop">Supprimer les lignes</option>
+                      <option value="constant">Valeur fixe</option>
+                    </select>
+                  </div>
+
+                  <div className="recipe-stat-number">
+                    {totalMissingCells.toLocaleString('fr-FR')} cellules
+                  </div>
+
+                  <button
+                    type="button"
+                    className={`preview-action-btn ${activePreviewStep === '02' ? 'active' : ''}`}
+                    onClick={() => setActivePreviewStep('02')}
+                  >
+                    <span>{activePreviewStep === '02' ? "En cours d'aperçu" : 'Aperçu →'}</span>
+                  </button>
+                </div>
               </div>
+            )}
 
-              <button
-                type="button"
-                className={`preview-action-btn ${activePreviewStep === '05' ? 'active' : ''}`}
-                onClick={() => {
-                  setActivePreviewStep('05');
-                  navigate('/augmentation');
-                }}
-              >
-                <span>{activePreviewStep === '05' ? 'Previewing' : 'Preview →'}</span>
-                <ArrowRight size={12} />
-              </button>
+            {/* Step 03: Catégories incohérentes (Condition: inconsistentCatColumn exists) */}
+            {inconsistentCatColumn && (
+              <div className={`recipe-card ${activePreviewStep === '03' ? 'active-preview' : ''}`}>
+                <div className="recipe-toggle-wrapper">
+                  <span className="recipe-step-num">03</span>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={step03Active}
+                      onChange={(e) => setStep03Active(e.target.checked)}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+
+                <div className="recipe-text-block">
+                  <div className="recipe-title">
+                    Fusionner les variantes de {inconsistentCatColumn.name}
+                  </div>
+                  <div className="recipe-subtitle">
+                    {safeMappings.length} variantes à normaliser ({safeRowsCount} lignes)
+                    {uncertainMappings.length > 0 ? ` · ${uncertainMappings.length} cas incertains à valider` : ''}
+                  </div>
+                </div>
+
+                <div className="recipe-controls-block">
+                  <div className="recipe-select-group">
+                    <span className="recipe-control-label">MAPPING</span>
+                    <select
+                      className="recipe-select font-mono"
+                      value={step03MappingStrategy}
+                      onChange={(e) => setStep03MappingStrategy(e.target.value as any)}
+                    >
+                      <option value="auto">Variantes automatiques</option>
+                      <option value="normalize_only">Normalisation seule</option>
+                    </select>
+                  </div>
+
+                  <div className="recipe-stat-number">
+                    {(safeRowsCount + Object.values(selectedUncertainMatches).filter(Boolean).length * 8).toLocaleString('fr-FR')} cellules
+                  </div>
+
+                  <button
+                    type="button"
+                    className={`preview-action-btn ${activePreviewStep === '03' ? 'active' : ''}`}
+                    onClick={() => setActivePreviewStep('03')}
+                  >
+                    <span>{activePreviewStep === '03' ? "En cours d'aperçu" : 'Aperçu →'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 04: Outliers (Condition: outlierColumns.length > 0) */}
+            {outlierColumns.length > 0 && (
+              <div className={`recipe-card ${activePreviewStep === '04' ? 'active-preview' : ''}`}>
+                <div className="recipe-toggle-wrapper">
+                  <span className="recipe-step-num">04</span>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={step04Active}
+                      onChange={(e) => setStep04Active(e.target.checked)}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+
+                <div className="recipe-text-block">
+                  <div className="recipe-title">
+                    Plafonner les valeurs aberrantes ({outlierColumns.map((c) => c.name).join(', ')})
+                  </div>
+                  <div className="recipe-subtitle">
+                    {outlierColumns.map((c) => `${c.name} (${c.outlier_count} outliers)`).join(' · ')} hors clôtures IQR
+                  </div>
+                </div>
+
+                <div className="recipe-controls-block">
+                  <div className="recipe-select-group">
+                    <span className="recipe-control-label">MÉTHODE</span>
+                    <select
+                      className="recipe-select font-mono"
+                      value={step04Method}
+                      onChange={(e) => setStep04Method(e.target.value as any)}
+                    >
+                      <option value="cap_iqr">Plafonner aux bornes IQR</option>
+                      <option value="drop">Supprimer les outliers</option>
+                      <option value="keep">Conserver</option>
+                    </select>
+                  </div>
+
+                  <div className="recipe-stat-number">
+                    {totalOutliersCount.toLocaleString('fr-FR')} cellules
+                  </div>
+
+                  <button
+                    type="button"
+                    className={`preview-action-btn ${activePreviewStep === '04' ? 'active' : ''}`}
+                    onClick={() => setActivePreviewStep('04')}
+                  >
+                    <span>{activePreviewStep === '04' ? "En cours d'aperçu" : 'Aperçu →'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 05: Balance the target (Condition: isTargetImbalanced) */}
+            {isTargetImbalanced && (
+              <div className={`recipe-card ${activePreviewStep === '05' ? 'active-preview' : ''}`}>
+                <div className="recipe-toggle-wrapper">
+                  <span className="recipe-step-num">05</span>
+                  <span className="badge-later">PLUS TARD</span>
+                </div>
+
+                <div className="recipe-text-block">
+                  <div className="recipe-title">
+                    Équilibrer la variable cible · {targetCol}
+                  </div>
+                  <div className="recipe-subtitle">
+                    Délégué à l'étape Augmentation : le rééchantillonnage s'effectue après la séparation apprentissage / test
+                  </div>
+                </div>
+
+                <div className="recipe-controls-block">
+                  <div className="recipe-select-group">
+                    <span className="recipe-control-label">PRISE EN CHARGE</span>
+                    <div
+                      className="font-mono"
+                      style={{
+                        background: '#18181c',
+                        border: '1px solid #2a2a30',
+                        color: '#e4e4e7',
+                        padding: '0.35rem 0.7rem',
+                        borderRadius: 4,
+                        fontSize: '0.78rem',
+                      }}
+                    >
+                      03 Augmentation
+                    </div>
+                  </div>
+
+                  <div className="recipe-stat-number" style={{ color: 'var(--text-muted)' }}>
+                    Étape suivante
+                  </div>
+
+                  <button
+                    type="button"
+                    className={`preview-action-btn ${activePreviewStep === '05' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActivePreviewStep('05');
+                      navigate('/augmentation');
+                    }}
+                  >
+                    <span>Aperçu →</span>
+                    <ArrowRight size={12} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Add a manual step line */}
+            <div
+              className="add-manual-step"
+              onClick={() => setShowManualModal(true)}
+              style={{
+                border: '1px dashed #26262b',
+                borderRadius: 6,
+                padding: '0.85rem',
+                textAlign: 'center',
+                color: 'var(--text-muted)',
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                marginTop: '0.35rem',
+              }}
+            >
+              <span>+ Ajouter une étape manuelle — supprimer colonne, modifier type, filtrer lignes, renommer</span>
             </div>
           </div>
-
-          {/* Add a manual step line */}
-          <div
-            className="add-manual-step"
-            onClick={() => setShowManualModal(true)}
-            style={{
-              border: '1px dashed #26262b',
-              borderRadius: 6,
-              padding: '0.85rem',
-              textAlign: 'center',
-              color: 'var(--text-muted)',
-              fontSize: '0.78rem',
-              cursor: 'pointer',
-              marginTop: '0.35rem',
-            }}
-          >
-            <span>+ Add a manual step — drop column, change type, filter rows, rename</span>
-          </div>
         </div>
-      </div>
+      )}
 
-      {/* Two Columns Grid: Preview (Left) and Quality impact (Right) */}
+      {/* Two Columns Grid: Aperçu (Left) and Impact sur la qualité (Right) */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '3rem', alignItems: 'start' }}>
-        {/* Left Column: Preview Table */}
+        {/* Left Column: Aperçu Table */}
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
             <h3 className="font-serif" style={{ fontSize: '1.6rem', fontWeight: 400, color: 'var(--text-main)' }}>
-              Preview
+              Aperçu
             </h3>
             <div className="font-mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
               {activeStepTitle}
@@ -1048,16 +1215,16 @@ export const CleaningPage: React.FC = () => {
               <thead>
                 <tr style={{ borderBottom: '1px solid #202026' }}>
                   <th className="font-mono" style={{ padding: '0.75rem 1.25rem', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 500, fontSize: '0.68rem', letterSpacing: '0.06em' }}>
-                    COLUMN
+                    COLONNE
                   </th>
                   <th className="font-mono" style={{ padding: '0.75rem 1.25rem', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 500, fontSize: '0.68rem', letterSpacing: '0.06em' }}>
-                    BEFORE
+                    AVANT
                   </th>
                   <th className="font-mono" style={{ padding: '0.75rem 1.25rem', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 500, fontSize: '0.68rem', letterSpacing: '0.06em' }}>
-                    AFTER
+                    APRÈS
                   </th>
                   <th className="font-mono" style={{ padding: '0.75rem 1.25rem', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 500, fontSize: '0.68rem', letterSpacing: '0.06em' }}>
-                    ROWS
+                    LIGNES
                   </th>
                 </tr>
               </thead>
@@ -1084,7 +1251,7 @@ export const CleaningPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="font-mono" style={{ padding: '0.75rem 1.25rem', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                        {item.rows > 0 ? item.rows.toLocaleString('en-US') : '—'}
+                        {item.rows > 0 ? item.rows.toLocaleString('fr-FR') : '—'}
                       </td>
                     </tr>
                   ))
@@ -1093,29 +1260,54 @@ export const CleaningPage: React.FC = () => {
             </table>
           </div>
 
-          {/* Uncertain mappings note underneath table */}
-          {activePreviewStep === '03' && (
-            <div style={{ marginTop: '0.85rem', fontSize: '0.76rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-              4 mappings are uncertain (e.g. "Sale" vs "Salé") and wait for your review before they are applied.
+          {/* Uncertain mappings section (User validation required, never applied automatically) */}
+          {activePreviewStep === '03' && uncertainMappings.length > 0 && (
+            <div style={{ marginTop: '1rem', background: '#141418', border: '1px solid #282830', borderRadius: 6, padding: '1rem' }}>
+              <div className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--amber)', fontWeight: 600, marginBottom: '0.45rem' }}>
+                Cas incertains à valider par l’utilisateur (non appliqués automatiquement) :
+              </div>
+              <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                Ces variantes ne diffèrent pas uniquement par la casse ou les accents. Cochez celles que vous confirmez vouloir fusionner :
+              </p>
+              {uncertainMappings.map((u) => (
+                <div key={u.from} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.35rem 0' }}>
+                  <input
+                    type="checkbox"
+                    id={`uncertain-${u.from}`}
+                    checked={!!selectedUncertainMatches[u.from]}
+                    onChange={(e) => {
+                      setSelectedUncertainMatches((prev) => ({
+                        ...prev,
+                        [u.from]: e.target.checked,
+                      }));
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <label htmlFor={`uncertain-${u.from}`} style={{ fontSize: '0.78rem', color: '#e4e4e7', cursor: 'pointer' }}>
+                    <span className="strike-red">{u.from}</span> → <span className="badge-after">{u.to}</span> ({u.rows} lignes) —{' '}
+                    <span style={{ color: 'var(--text-muted)' }}>{u.reason}</span>
+                  </label>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Right Column: Quality Impact */}
+        {/* Right Column: Impact sur la qualité */}
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
             <h3 className="font-serif" style={{ fontSize: '1.6rem', fontWeight: 400, color: 'var(--text-main)' }}>
-              Quality impact
+              Impact sur la qualité
             </h3>
             <div className="font-mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
-              BEFORE · AFTER
+              AVANT · APRÈS
             </div>
           </div>
 
-          {/* Bar 1: Completeness */}
+          {/* Bar 1: Complétude */}
           <div className="quality-impact-row">
             <div className="quality-impact-header">
-              <span style={{ color: 'var(--text-secondary)' }}>Completeness</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Complétude</span>
               <span className="font-mono" style={{ color: 'var(--text-main)', fontSize: '0.78rem' }}>
                 {Math.round(subBefore.completeness)} → {Math.round(subAfter.completeness)}%
               </span>
@@ -1126,10 +1318,10 @@ export const CleaningPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bar 2: Uniqueness */}
+          {/* Bar 2: Unicité */}
           <div className="quality-impact-row">
             <div className="quality-impact-header">
-              <span style={{ color: 'var(--text-secondary)' }}>Uniqueness</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Unicité</span>
               <span className="font-mono" style={{ color: 'var(--text-main)', fontSize: '0.78rem' }}>
                 {Math.round(subBefore.uniqueness)} → {Math.round(subAfter.uniqueness)}%
               </span>
@@ -1140,10 +1332,10 @@ export const CleaningPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bar 3: Validity */}
+          {/* Bar 3: Validité */}
           <div className="quality-impact-row">
             <div className="quality-impact-header">
-              <span style={{ color: 'var(--text-secondary)' }}>Validity</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Validité</span>
               <span className="font-mono" style={{ color: 'var(--text-main)', fontSize: '0.78rem' }}>
                 {Math.round(subBefore.validity)} → {Math.round(subAfter.validity)}%
               </span>
@@ -1154,10 +1346,10 @@ export const CleaningPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bar 4: Consistency */}
+          {/* Bar 4: Cohérence */}
           <div className="quality-impact-row">
             <div className="quality-impact-header">
-              <span style={{ color: 'var(--text-secondary)' }}>Consistency</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Cohérence</span>
               <span className="font-mono" style={{ color: 'var(--text-main)', fontSize: '0.78rem' }}>
                 {Math.round(subBefore.consistency)} → {Math.round(subAfter.consistency)}%
               </span>
@@ -1168,68 +1360,70 @@ export const CleaningPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bar 5: Class balance */}
+          {/* Bar 5: Équilibre des classes */}
           <div className="quality-impact-row" style={{ marginBottom: '0.5rem' }}>
             <div className="quality-impact-header">
-              <span style={{ color: 'var(--text-secondary)' }}>Class balance</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Équilibre des classes</span>
               <span className="font-mono" style={{ color: '#fb7185', fontSize: '0.78rem' }}>
                 {subBefore.class_balance !== null ? `${Math.round(subBefore.class_balance)}%` : '—'}
               </span>
             </div>
             <div className="quality-bar-track">
-              <div className="quality-bar-fill-class" style={{ width: `${subBefore.class_balance || 41}%` }}></div>
+              <div className="quality-bar-fill-class" style={{ width: `${subBefore.class_balance || 0}%` }}></div>
             </div>
             <div style={{ marginTop: '0.5rem', fontSize: '0.73rem', color: 'var(--text-muted)' }}>
-              Improves in 03 Augmentation, on the training split only
+              S'améliore à l'étape 03 Augmentation, sur le jeu d'entraînement uniquement
             </div>
           </div>
         </div>
       </div>
 
       {/* Floating Bottom Execution Bar */}
-      <div className="footer-execution-bar">
-        <div>
-          <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-main)', marginBottom: '0.2rem' }}>
-            {activeStepsCount} steps will run on {currentVersionLabel} raw
+      {hasIssuesToClean && (
+        <div className="footer-execution-bar">
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-main)', marginBottom: '0.2rem' }}>
+              {activeStepsCount} étape{activeStepsCount > 1 ? 's seront appliquées' : ' sera appliquée'} sur la version {currentVersionLabel}
+            </div>
+            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+              {currentVersionLabel} reste intacte · le résultat est enregistré en tant que {nextVersionLabel} avec cette recette attachée, rejouable sur de nouvelles données
+            </div>
           </div>
-          <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-            {currentVersionLabel} stays untouched · the result is saved as {nextVersionLabel} with this recipe attached, so it can be replayed on new data
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.55rem 1.15rem' }}
+              disabled={simulating}
+              onClick={() => runSimulation(true)}
+            >
+              {simulating ? <RefreshCw className="animate-spin" size={14} /> : 'Simulation (Dry run)'}
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{
+                fontSize: '0.82rem',
+                padding: '0.55rem 1.35rem',
+                fontWeight: 600,
+              }}
+              disabled={applying || activeStepsCount === 0}
+              onClick={handleApplyRecipe}
+            >
+              {applying ? (
+                <>
+                  <RefreshCw className="animate-spin" size={14} />
+                  <span>Application en cours...</span>
+                </>
+              ) : (
+                <span>Appliquer et créer la version {nextVersionLabel}</span>
+              )}
+            </button>
           </div>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button
-            type="button"
-            className="btn btn-secondary font-mono"
-            style={{ fontSize: '0.78rem', padding: '0.55rem 1.15rem' }}
-            disabled={simulating}
-            onClick={() => runSimulation(true)}
-          >
-            {simulating ? <RefreshCw className="animate-spin" size={14} /> : 'Dry run on 10k rows'}
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-primary font-mono"
-            style={{
-              fontSize: '0.82rem',
-              padding: '0.55rem 1.35rem',
-              fontWeight: 600,
-            }}
-            disabled={applying || activeStepsCount === 0}
-            onClick={handleApplyRecipe}
-          >
-            {applying ? (
-              <>
-                <RefreshCw className="animate-spin" size={14} />
-                <span>Création en cours...</span>
-              </>
-            ) : (
-              <span>Apply and create {nextVersionLabel}</span>
-            )}
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Modal: Export Recipe */}
       {showExportModal && (
@@ -1239,7 +1433,7 @@ export const CleaningPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <Download size={18} color="var(--amber)" />
                 <h3 className="modal-title font-serif" style={{ fontSize: '1.35rem' }}>
-                  Export Cleaning Recipe
+                  Exporter la recette de nettoyage
                 </h3>
               </div>
               <button
@@ -1292,7 +1486,7 @@ export const CleaningPage: React.FC = () => {
 
                 <a
                   href={`data:text/json;charset=utf-8,${encodeURIComponent(recipeExportJson)}`}
-                  download={`cleaning_recipe_${originalFileName}.json`}
+                  download={`recette_nettoyage_${originalFileName}.json`}
                   className="btn btn-primary font-mono"
                   style={{ fontSize: '0.78rem', textDecoration: 'none' }}
                 >
@@ -1313,7 +1507,7 @@ export const CleaningPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <Plus size={18} color="var(--amber)" />
                 <h3 className="modal-title font-serif" style={{ fontSize: '1.25rem' }}>
-                  Add a manual step
+                  Ajouter une étape manuelle
                 </h3>
               </div>
               <button
@@ -1328,23 +1522,23 @@ export const CleaningPage: React.FC = () => {
             <div style={{ padding: '1.5rem' }}>
               <div style={{ marginBottom: '1.25rem' }}>
                 <label className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
-                  ACTION TYPE
+                  TYPE D'OPÉRATION
                 </label>
                 <select
                   value={manualStepType}
                   onChange={(e) => setManualStepType(e.target.value)}
                   style={{ width: '100%', background: '#121214', border: '1px solid #27272a', padding: '0.5rem', borderRadius: 4, color: '#f4f4f6', fontSize: '0.8rem' }}
                 >
-                  <option value="DROP_COLUMN">Supprimer une colonne (drop column)</option>
-                  <option value="CHANGE_TYPE">Modifier le type (change type)</option>
-                  <option value="FILTER_ROWS">Filtrer des lignes (filter rows)</option>
-                  <option value="RENAME_COLUMN">Renommer une colonne (rename)</option>
+                  <option value="DROP_COLUMN">Supprimer une colonne</option>
+                  <option value="CHANGE_TYPE">Modifier le type</option>
+                  <option value="FILTER_ROWS">Filtrer des lignes</option>
+                  <option value="RENAME_COLUMN">Renommer une colonne</option>
                 </select>
               </div>
 
               <div style={{ marginBottom: '1.5rem' }}>
                 <label className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
-                  TARGET COLUMN
+                  COLONNE CIBLE
                 </label>
                 <select
                   value={manualStepCol}

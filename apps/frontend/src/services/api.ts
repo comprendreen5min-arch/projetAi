@@ -6,6 +6,7 @@ import {
   CleaningOperation,
   CleaningPreviewResponse,
   CleaningApplyResponse,
+  CategoryResponse,
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -140,8 +141,8 @@ export const api = {
     versionHash: string,
     column: string,
     normalized: boolean = false
-  ): Promise<{ column: string; normalized: boolean; categories: Array<{ value: string; count: number }>; total_unique: number }> {
-    const res = await apiClient.get('/cleaning/categories', {
+  ): Promise<CategoryResponse> {
+    const res = await apiClient.get<CategoryResponse>('/cleaning/categories', {
       params: { version_hash: versionHash, column, normalized },
     });
     return res.data;

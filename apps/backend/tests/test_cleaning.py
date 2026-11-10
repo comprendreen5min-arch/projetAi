@@ -441,3 +441,109 @@ def test_cleaning_api_preview_and_apply_endpoints(client):
     assert a_data["after_profile"]["summary"]["duplicate_rows_count"] == 0
 
 
+def test_churn_dataset_numbers_match_api_response(client):
+    """Test de vérification stricte sur test_churn.csv :
+    - 6 doublons
+    - 3 colonnes avec valeurs manquantes (income: 28, city: 5, age: 2)
+    - 256 -> 250 lignes après application de la suppression des doublons
+    - Cas incertain 'casa' (8 lignes) détecté avec applied_by_default=False
+    - Échoue immédiatement si un seul chiffre ne correspond pas à la vérité des données.
+    """
+    csv_file = Path(__file__).parent / "test_churn.csv"
+    assert csv_file.exists(), "Le fichier de test test_churn.csv doit exister."
+
+    # 1. Ingestion de test_churn.csv
+    with open(csv_file, "rb") as f:
+        upload_resp = client.post(
+            "/api/v1/datasets/upload-raw",
+            data={"name": "test_churn_strict_verification", "description": "Verification data numbers"},
+            files={"file": ("test_churn.csv", f, "text/csv")},
+        )
+    assert upload_resp.status_code == 201, f"Échec de l'upload: {upload_resp.text}"
+    upload_data = upload_resp.json()
+    v1_hash = upload_data["versions"][0]["version_hash"]
+
+    # 2. Vérification du profil de v1
+    prof_resp = client.get(f"/api/v1/versions/{v1_hash}/profile")
+    assert prof_resp.status_code == 200, f"Échec du profil: {prof_resp.text}"
+    profile = prof_resp.json()
+
+    # Exactement 256 lignes initiales
+    assert profile["summary"]["total_rows"] == 256, (
+        f"Attendu 256 lignes, reçu {profile['summary']['total_rows']}"
+    )
+
+    # Exactement 6 doublons
+    assert profile["summary"]["duplicate_rows_count"] == 6, (
+        f"Attendu 6 doublons, reçu {profile['summary']['duplicate_rows_count']}"
+    )
+
+    # Exactement 3 colonnes avec valeurs manquantes
+    cols = {c["name"]: c for c in profile["columns"]}
+    missing_cols = {name: col["null_count"] for name, col in cols.items() if col["null_count"] > 0}
+    assert len(missing_cols) == 3, (
+        f"Attendu exactement 3 colonnes avec valeurs manquantes, trouvé {len(missing_cols)}: {missing_cols}"
+    )
+    assert set(missing_cols.keys()) == {"income", "city", "age"}, (
+        f"Colonnes avec manquants inattendues: {set(missing_cols.keys())}"
+    )
+    assert missing_cols["income"] == 28, f"Attendu 28 manquants pour income, reçu {missing_cols['income']}"
+    assert missing_cols["city"] == 5, f"Attendu 5 manquants pour city (cases vides), reçu {missing_cols['city']}"
+    assert missing_cols["age"] == 2, f"Attendu 2 manquants pour age, reçu {missing_cols['age']}"
+
+    # 3. Vérification des catégories pour la colonne city
+    cat_resp = client.get(f"/api/v1/cleaning/categories?version_hash={v1_hash}&column=city")
+    assert cat_resp.status_code == 200
+    cat_data = cat_resp.json()
+
+    # Vérification du cas incertain 'casa' (8 lignes)
+    uncertain = cat_data.get("uncertain_mappings", [])
+    casa_uncertain = next((u for u in uncertain if u["from"] == "casa"), None)
+    assert casa_uncertain is not None, "Le mapping incertain 'casa' doit être détecté"
+    assert casa_uncertain["to"] == "Casablanca"
+    assert casa_uncertain["rows"] == 8, f"Attendu 8 lignes pour 'casa', reçu {casa_uncertain['rows']}"
+    assert casa_uncertain["is_uncertain"] is True
+    assert casa_uncertain["applied_by_default"] is False, "Les cas incertains ne doivent JAMAIS être appliqués par défaut"
+
+    # 4. Prévisualisation /preview de la suppression des doublons
+    preview_resp = client.post(
+        "/api/v1/cleaning/preview",
+        json={
+            "source_version_hash": v1_hash,
+            "target_column": "churn",
+            "operations": [{"type": "DROP_DUPLICATES", "parameters": {"keep": "first"}}],
+        },
+    )
+    assert preview_resp.status_code == 200
+    prev_data = preview_resp.json()
+    assert prev_data["rows_before"] == 256, f"Attendu rows_before=256, reçu {prev_data['rows_before']}"
+    assert prev_data["rows_after"] == 250, f"Attendu rows_after=250, reçu {prev_data['rows_after']}"
+    assert prev_data["rows_affected"] == 6, f"Attendu rows_affected=6, reçu {prev_data['rows_affected']}"
+    assert prev_data["is_noop"] is False
+
+    # 5. Application /apply et création de la version nettoyée
+    apply_resp = client.post(
+        "/api/v1/cleaning/apply",
+        json={
+            "source_version_hash": v1_hash,
+            "target_column": "churn",
+            "confirm_target_modification": False,
+            "operations": [{"type": "DROP_DUPLICATES", "parameters": {"keep": "first"}}],
+        },
+    )
+    assert apply_resp.status_code == 201, f"Échec de l'application: {apply_resp.text}"
+    app_data = apply_resp.json()
+
+    assert app_data["rows_before"] == 256, f"Attendu rows_before=256, reçu {app_data['rows_before']}"
+    assert app_data["rows_after"] == 250, f"Attendu rows_after=250 (256 -> 250), reçu {app_data['rows_after']}"
+    assert app_data["rows_affected"] == 6, f"Attendu rows_affected=6, reçu {app_data['rows_affected']}"
+    assert app_data["parent_version_hash"] == v1_hash
+    assert app_data["new_version_hash"] != v1_hash
+
+    # Le profil post-nettoyage doit confirmer 250 lignes et 0 doublon
+    after_summary = app_data["after_profile"]["summary"]
+    assert after_summary["total_rows"] == 250
+    assert after_summary["duplicate_rows_count"] == 0
+
+
+
