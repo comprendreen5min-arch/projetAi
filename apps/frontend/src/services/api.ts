@@ -1,5 +1,12 @@
 import axios from 'axios';
-import { Dataset, DatasetVersion, VersionProfile } from '../types';
+import {
+  Dataset,
+  DatasetVersion,
+  VersionProfile,
+  CleaningOperation,
+  CleaningPreviewResponse,
+  CleaningApplyResponse,
+} from '../types';
 
 const API_BASE = '/api/v1';
 
@@ -97,6 +104,46 @@ export const api = {
         parameters,
       }
     );
+    return res.data;
+  },
+
+  // Cleaning
+  async previewCleaning(
+    sourceVersionHash: string,
+    operations: CleaningOperation[],
+    targetColumn?: string | null
+  ): Promise<CleaningPreviewResponse> {
+    const res = await apiClient.post<CleaningPreviewResponse>('/cleaning/preview', {
+      source_version_hash: sourceVersionHash,
+      operations,
+      target_column: targetColumn || null,
+    });
+    return res.data;
+  },
+
+  async applyCleaning(
+    sourceVersionHash: string,
+    operations: CleaningOperation[],
+    targetColumn?: string | null,
+    confirmTargetModification: boolean = false
+  ): Promise<CleaningApplyResponse> {
+    const res = await apiClient.post<CleaningApplyResponse>('/cleaning/apply', {
+      source_version_hash: sourceVersionHash,
+      operations,
+      target_column: targetColumn || null,
+      confirm_target_modification: confirmTargetModification,
+    });
+    return res.data;
+  },
+
+  async getColumnCategories(
+    versionHash: string,
+    column: string,
+    normalized: boolean = false
+  ): Promise<{ column: string; normalized: boolean; categories: Array<{ value: string; count: number }>; total_unique: number }> {
+    const res = await apiClient.get('/cleaning/categories', {
+      params: { version_hash: versionHash, column, normalized },
+    });
     return res.data;
   },
 };

@@ -124,3 +124,69 @@ export interface VersionProfile {
   original_filename?: string;
   version_hash: string;
 }
+
+export type CleaningOperationType =
+  | 'TEXT_NORMALIZE'
+  | 'CATEGORY_MERGE'
+  | 'HANDLE_MISSING'
+  | 'HANDLE_OUTLIERS'
+  | 'DROP_DUPLICATES';
+
+export interface CleaningOperation {
+  id?: string;
+  type: CleaningOperationType;
+  column?: string | null;
+  parameters: Record<string, any>;
+}
+
+export interface StepDiffItem {
+  column: string;
+  before: string;
+  after: string;
+  rows: number;
+}
+
+export interface CleaningPreviewResponse {
+  rows_before: number;
+  rows_after: number;
+  rows_affected: number;
+  cells_changed?: number;
+  cells_changed_percentage?: number;
+  predicted_health_score?: number | null;
+  predicted_sub_scores?: Record<string, number> | null;
+  is_noop: boolean;
+  target_affected: boolean;
+  target_warning?: string | null;
+  columns_affected: string[];
+  operations_executed: Array<{
+    type: string;
+    column?: string | null;
+    parameters: Record<string, any>;
+    rows_affected: number;
+  }>;
+  sample_before: Record<string, any>[];
+  sample_after: Record<string, any>[];
+  step_diffs?: {
+    duplicates?: StepDiffItem[];
+    missing?: StepDiffItem[];
+    categories?: StepDiffItem[];
+    outliers?: StepDiffItem[];
+  };
+  uncertain_mappings?: Array<{ from: string; to: string; reason: string }>;
+}
+
+export interface CleaningApplyResponse {
+  new_version_hash: string;
+  new_version_id: string;
+  parent_version_hash: string;
+  rows_before: number;
+  rows_after: number;
+  rows_affected: number;
+  transformation_name: string;
+  parameters: Record<string, any>;
+  before_profile: VersionProfile;
+  after_profile: VersionProfile;
+  health_score_delta: number;
+  sub_scores_delta: Record<string, number>;
+}
+
