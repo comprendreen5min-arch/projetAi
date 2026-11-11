@@ -5,6 +5,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { VersioningPage } from './pages/VersioningPage';
 import { ProfilingPage } from './pages/ProfilingPage';
 import { CleaningPage } from './pages/CleaningPage';
+import { AugmentationPage } from './pages/AugmentationPage';
 import { PlaceholderStep } from './pages/PlaceholderStep';
 import { ArrowRight, Download } from 'lucide-react';
 
@@ -98,6 +99,26 @@ const TopBar: React.FC = () => {
               <ArrowRight size={14} />
             </button>
           </>
+        ) : location.pathname === '/augmentation' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:export-augmentation-recipe'))}
+            >
+              Exporter la recette
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => navigate('/versioning')}
+            >
+              <span>Continuer vers le versioning</span>
+              <ArrowRight size={14} />
+            </button>
+          </>
         ) : (
           <>
             <button
@@ -148,16 +169,7 @@ export const App: React.FC = () => {
               <Route path="/cleaning" element={<CleaningPage />} />
 
               {/* 03. Augmentation */}
-              <Route
-                path="/augmentation"
-                element={
-                  <PlaceholderStep
-                    stepNumber="03"
-                    title="Augmentation de Données"
-                    description="Génération d'échantillons synthétiques et enrichissement de caractéristiques pour renforcer la robustesse des modèles."
-                  />
-                }
-              />
+              <Route path="/augmentation" element={<AugmentationPage />} />
 
               {/* 04. Versioning (Functional Module) */}
               <Route path="/versioning" element={<VersioningPage />} />

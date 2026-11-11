@@ -212,3 +212,142 @@ export interface CleaningApplyResponse {
   sub_scores_delta: Record<string, number>;
 }
 
+export interface SplitConfig {
+  train_ratio: number;
+  val_ratio: number;
+  test_ratio: number;
+  stratify_column?: string | null;
+  group_by_column?: string | null;
+  random_seed: number;
+}
+
+export interface TargetBalanceConfig {
+  mode: 'keep' | '20' | '30' | '50';
+  custom_target_ratio?: number | null;
+}
+
+export interface TechniquesConfig {
+  smote_nc_enabled: boolean;
+  smote_k_neighbors: number;
+  undersample_enabled: boolean;
+  undersample_seed: number;
+  light_noise_enabled: boolean;
+  noise_strength_pct: number;
+  class_weights_enabled: boolean;
+  class_weights_strategy?: string;
+}
+
+export interface GuardrailResult {
+  key: string;
+  label: string;
+  passed: boolean;
+  description: string;
+  details?: Record<string, any> | null;
+}
+
+export interface AugmentationPreviewRequest {
+  source_version_hash: string;
+  target_column: string;
+  split_config: SplitConfig;
+  balance_config: TargetBalanceConfig;
+  techniques: TechniquesConfig;
+}
+
+export interface AugmentationPreviewResponse {
+  rows_in_train_before: number;
+  rows_in_train_after: number;
+  rows_generated: number;
+  rows_undersampled: number;
+  test_set_size: number;
+  val_set_size: number;
+  actual_split_ratios: Record<string, number>;
+  minority_class_label: any;
+  majority_class_label: any;
+  minority_pct_before: number;
+  minority_pct_after: number;
+  balance_score_before: number;
+  balance_score_after: number;
+  balance_distribution: {
+    majority: {
+      label: string;
+      total_initial: number;
+      kept: number;
+      undersampled: number;
+    };
+    minority: {
+      label: string;
+      total_initial: number;
+      real: number;
+      generated: number;
+    };
+    target_ratio: number;
+    cap_reached: boolean;
+  };
+  guardrails: GuardrailResult[];
+  sample_preview: Record<string, any>[];
+  recipe: Record<string, any>;
+  class_weights?: Record<string, number> | null;
+}
+
+export interface AugmentationApplyRequest {
+  source_version_hash: string;
+  target_column: string;
+  split_config: SplitConfig;
+  balance_config: TargetBalanceConfig;
+  techniques: TechniquesConfig;
+}
+
+export interface AugmentationApplyResponse {
+  new_version_hash: string;
+  new_version_id: string;
+  parent_version_hash: string;
+  total_rows: number;
+  rows_in_train: number;
+  rows_generated: number;
+  rows_undersampled: number;
+  transformation_name: string;
+  parameters: Record<string, any>;
+  recipe: Record<string, any>;
+  before_profile: VersionProfile;
+  after_profile: VersionProfile;
+  balance_score_delta: number;
+  guardrails: GuardrailResult[];
+}
+
+export interface ComparisonMetricResult {
+  mean: number;
+  std: number;
+  seed_values: number[];
+}
+
+export interface ModelComparisonMetrics {
+  recall: ComparisonMetricResult;
+  precision: ComparisonMetricResult;
+  f1_score: ComparisonMetricResult;
+}
+
+export interface AugmentationComparisonRequest {
+  source_version_hash: string;
+  target_column: string;
+  split_config: SplitConfig;
+  balance_config: TargetBalanceConfig;
+  techniques: TechniquesConfig;
+  model_type: 'logistic_regression' | 'random_forest';
+  seeds?: number[];
+}
+
+export interface AugmentationComparisonResponse {
+  model_type: string;
+  model_label: string;
+  test_total_count: number;
+  test_positive_count: number;
+  minority_class_label: any;
+  baseline_metrics: ModelComparisonMetrics;
+  augmented_metrics: ModelComparisonMetrics;
+  deltas: Record<string, number>;
+  seeds_used: number[];
+  warning_disclaimer: string;
+}
+
+
+

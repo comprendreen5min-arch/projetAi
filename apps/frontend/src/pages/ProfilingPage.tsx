@@ -125,12 +125,24 @@ export const ProfilingPage: React.FC = () => {
   };
 
   const handleFindingAction = (item: any) => {
+    // Si c'est un problème de déséquilibre sur la variable cible, rediriger vers l'étape 03 Augmentation
+    if (item.title?.includes('Déséquilibre') || item.action_type === 'options') {
+      const targetParam = item.column ? `&target=${encodeURIComponent(item.column)}` : '';
+      navigate(`/augmentation?dataset=${selectedDatasetId}&version=${selectedVersionHash}${targetParam}`, {
+        state: {
+          datasetId: selectedDatasetId,
+          versionHash: selectedVersionHash,
+          targetColumn: item.column || profile?.summary.target_column,
+        },
+      });
+      return;
+    }
+
     let operation = 'duplicates';
     if (item.action_type === 'fix') operation = 'missing';
     else if (item.action_type === 'review') operation = 'outliers';
     else if (item.action_type === 'merge') operation = 'categories';
     else if (item.action_type === 'remove') operation = 'duplicates';
-    else if (item.action_type === 'options') operation = 'missing';
 
     const colParam = item.column ? `&col=${encodeURIComponent(item.column)}` : '';
     navigate(`/cleaning?dataset=${selectedDatasetId}&version=${selectedVersionHash}&op=${operation}${colParam}`, {

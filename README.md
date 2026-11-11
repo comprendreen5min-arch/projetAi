@@ -254,6 +254,71 @@ Les paramètres stockés dans la table `Transformation` contiennent les **valeur
 
 ---
 
+## 🔬 Module 03 : Augmentation & Équilibrage Stratifié (Augmentation)
+
+Le module d'augmentation permet de découper et d'enrichir le jeu de données pour l'apprentissage machine, dans le respect rigoureux de l'étanchéité des données et de la reproductibilité.
+
+### 1. Découpage Stratifié & Groupé (Split First)
+- **Principe fondamental** : Seul le sous-ensemble **Train** est augmenté ou rééchantillonné. Les sous-ensembles **Validation** et **Test** restent **100 % réels, intacts et verrouillés**.
+- **Stratification** : Réalisée sur la variable cible pour préserver les proportions exactes des classes dans chaque partition.
+- **Groupement (`group_by`)** : Permet de grouper par une clé métier (ex. `customer_id`) pour éviter toute fuite de données d'un même individu entre le train et le test. Les ratios réels obtenus sont affichés, et le split est refusé si une partition contient moins de 3 exemples de la classe rare.
+- **Ajout de la colonne `split`** : Chaque ligne est étiquetée avec `train`, `val` ou `test`.
+
+### 2. Équilibrage de la Cible & Plafond Synthétique
+- **Objectifs de part de la classe rare** : `Garder`, `20 %`, `30 %`, `50 %`.
+- **Plafond strict de 50 % de synthétiques par classe** :
+  Le nombre de lignes synthétiques générées ne peut jamais dépasser le nombre d'exemples réels existants de cette classe :
+  $$N_{\text{synth}} \le N_{\text{min\_real}}$$
+- **Sous-échantillonnage de la majorité** :
+  Si l'objectif souhaité (ex. 30 % ou 50 %) n'est pas encore atteint après avoir atteint le plafond de 50 % de synthétiques, la classe majoritaire est sous-échantillonnée aléatoirement avec une graine fixe jusqu'à atteindre le ratio exact.
+
+### 3. Techniques d'Augmentation Déterministes
+- **SMOTE-NC Natif & Traçabilité des Parents** :
+  - Recherche des $k$ plus proches voisins sur le sous-ensemble de la classe rare du **Train uniquement**.
+  - Standardisation (`StandardScaler`) des variables numériques pour le calcul des distances euclidiennes, mais **interpolation sur les valeurs brutes d'origine**.
+  - Les modalités catégorielles sont choisies parmi les voisins réels, garantissant qu'aucune modalité inconnue n'est inventée.
+  - Chaque ligne générée porte : `is_synthetic = True`, `origin = "smote"`, et `parent_ids = "ID1 + ID2"` listant les 2 clients parents réels.
+  - Nouvel identifiant synthétique généré (ex. `SYN-000123`).
+  - Refus immédiat avec message clair si le jeu contient des valeurs manquantes non nettoyées ou si la classe rare a moins de $k+1$ exemples.
+- **Traitement des Dates** :
+  1. Détection automatique des colonnes de type date/datetime.
+  2. Conversion temporaire en timestamps numériques Unix (secondes).
+  3. Interpolation linéaire : $t_{\text{syn}} = t_1 + \lambda (t_2 - t_1)$.
+  4. Reconversion dans le format d'origine (datetime ou chaîne ISO).
+  5. En cas de date parent invalide, conservation de la date du parent dominant.
+- **Bruit Léger sur Numériques** :
+  - Jitter gaussien $\mathcal{N}(0, (\text{force}\% \times \sigma)^2)$ appliqué uniquement aux lignes synthétiques générées.
+  - Bornage strict aux $[\min_{\text{obs}}, \max_{\text{obs}}]$ observés sur le Train, et conservation stricte du type entier.
+- **Poids de Classes** :
+  - Calcul des poids inversement proportionnels aux fréquences de classes sans modifier les données, enregistrés dans la recette pour l'étape Training.
+
+### 4. Formule du Score d'Équilibre de la Cible
+Le score d'équilibre de la cible sur le Train est calculé à l'aide de l'**Entropie normalisée de Shannon** (base $K$, où $K$ est le nombre de classes de la cible) :
+$$H = -\sum_{i=1}^K p_i \ln(p_i) \quad \implies \quad \text{Score} = \text{round}\left(\frac{H}{\ln(K)} \times 100\right)$$
+Ce score vaut $100$ pour une répartition parfaitement uniforme et tend vers $0$ en cas de déséquilibre extrême.
+
+### 5. Les 6 Guardrails d'Intégrité Vérifiés Avant Enregistrement
+1. **Jeu de test et validation jamais augmentés** : Tailles identiques avant/après, 0 ligne synthétique dans Val/Test, aucune ligne du train dupliquée dans le test.
+2. **Plafond max 50 % de synthétiques par classe** : $N_{\text{synth}} \le N_{\text{min\_real}}$.
+3. **Tag d'origine et parents sur chaque ligne générée** : `origin = smote`, `parent_ids` valide.
+4. **Validité des catégories (invariants)** : Toutes les catégories générées appartiennent au domaine des catégories réelles observées.
+5. **Parents de SMOTE-NC issus uniquement du Train** : Tous les voisins et parents appartiennent au split Train.
+6. **Pas de double correction** : Exclusion mutuelle stricte entre rééchantillonnage (SMOTE/sous-échantillonnage) et poids de classes.
+
+### 6. Exclusion des Métadonnées d'Augmentation
+Les colonnes `split`, `is_synthetic`, `origin` et `parent_ids` sont strictement des métadonnées de lignage : elles sont exclues des variables prédictives (features), du score de santé de profilage et du futur entraînement.
+
+### 7. Comparaison des Performances (« Est-ce que ça aide ? »)
+Le module intègre un banc d'essai pour évaluer l'impact réel de l'augmentation :
+- **Lignes de référence (Sans)** : utilise les lignes réelles du sous-ensemble Train de la version (`split = train` et `is_synthetic = false`), sans refaire de nouveau découpage.
+- **Lignes augmentées (Avec)** : utilise l'ensemble du Train de la version (`split = train`), intégrant les lignes générées et le sous-échantillonnage éventuel.
+- **Évaluation étanche** : les deux modèles sont évalués exclusivement sur le même jeu de test réel (`split = test`), avec un pré-traitement (imputation, standardisation, one-hot encoding) ajusté uniquement sur le Train respectif.
+- **Répétition sur 5 graines aléatoires** : l'expérience est répétée sur 5 graines ($42, 43, 44, 45, 46$) pour fournir la moyenne et l'écart-type sur le Rappel, la Précision et le score F1 de la classe rare.
+- **Signalement statistique** : affichage du nombre de positifs dans le jeu de test et mention explicite que sur un petit jeu de test les écarts peuvent être attribuables aux aléas d'échantillonnage.
+- **Bouton « Envoyer la recette à Training »** : présent et verrouillé avec la mention « Disponible à l'étape Training ».
+
+---
+
 ## 🔒 Immuabilité & Reproductibilité
 
 Chaque version est scellée par son hash cryptographique. Si une transformation est relancée avec les mêmes données d'entrée et les mêmes paramètres, le système calcule le même hash et garantit la déduplication et l'exactitude des expérimentations d'apprentissage automatique.

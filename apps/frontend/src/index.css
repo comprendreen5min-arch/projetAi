@@ -1022,5 +1022,181 @@ input:checked + .slider:before {
   margin-top: 2.5rem;
 }
 
+/* ==========================================================================
+   Étape 03 Augmentation Styles
+   ========================================================================== */
+
+/* Split Bar */
+.split-bar-container {
+  display: flex;
+  height: 42px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #16161a;
+  border: 1px solid #24242c;
+  margin-bottom: 0.75rem;
+}
+
+.split-bar-train {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #0f0f11;
+  font-weight: 600;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: width 0.3s ease;
+}
+
+.split-bar-val {
+  background: #27272a;
+  color: #d4d4d8;
+  font-weight: 500;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid #1f1f23;
+  white-space: nowrap;
+  transition: width 0.3s ease;
+}
+
+.split-bar-test {
+  background: #18181c;
+  color: #a1a1aa;
+  font-weight: 500;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-left: 1px solid #27272a;
+  white-space: nowrap;
+  transition: width 0.3s ease;
+}
+
+/* Target Balance Bar & Pills */
+.balance-pill {
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  background: #18181c;
+  border: 1px solid #27272a;
+  color: #a1a1aa;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.balance-pill:hover {
+  background: #222228;
+  color: #f4f4f6;
+}
+
+.balance-pill.active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #0f0f11;
+  font-weight: 600;
+}
+
+.target-balance-row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  gap: 1.5rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.target-balance-track {
+  height: 22px;
+  background: #18181c;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  position: relative;
+  border: 1px solid #24242a;
+}
+
+.target-bar-kept {
+  background: #52525b;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.target-bar-undersampled {
+  background: repeating-linear-gradient(
+    -45deg,
+    #27272a,
+    #27272a 4px,
+    #18181b 4px,
+    #18181b 8px
+  );
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.target-bar-real {
+  background: #fb7185;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.target-bar-generated {
+  background: #f59e0b;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.target-marker-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ffffff;
+  z-index: 5;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+/* Origin Badges */
+.origin-badge-real {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  background: #232328;
+  color: #a1a1aa;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.origin-badge-smote {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+/* Guardrails Item */
+.guardrail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #1c1c22;
+}
+
+.guardrail-item:last-child {
+  border-bottom: none;
+}
+
+
 
 

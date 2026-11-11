@@ -7,6 +7,12 @@ import {
   CleaningPreviewResponse,
   CleaningApplyResponse,
   CategoryResponse,
+  AugmentationPreviewRequest,
+  AugmentationPreviewResponse,
+  AugmentationApplyRequest,
+  AugmentationApplyResponse,
+  AugmentationComparisonRequest,
+  AugmentationComparisonResponse,
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -145,6 +151,22 @@ export const api = {
     const res = await apiClient.get<CategoryResponse>('/cleaning/categories', {
       params: { version_hash: versionHash, column, normalized },
     });
+    return res.data;
+  },
+
+  // Augmentation
+  async previewAugmentation(payload: AugmentationPreviewRequest): Promise<AugmentationPreviewResponse> {
+    const res = await apiClient.post<AugmentationPreviewResponse>('/augmentation/preview', payload);
+    return res.data;
+  },
+
+  async applyAugmentation(payload: AugmentationApplyRequest): Promise<AugmentationApplyResponse> {
+    const res = await apiClient.post<AugmentationApplyResponse>('/augmentation/apply', payload);
+    return res.data;
+  },
+
+  async compareAugmentation(payload: AugmentationComparisonRequest): Promise<AugmentationComparisonResponse> {
+    const res = await apiClient.post<AugmentationComparisonResponse>('/augmentation/compare', payload);
     return res.data;
   },
 };
