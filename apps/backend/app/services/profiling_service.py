@@ -86,11 +86,15 @@ class ProfilingService:
             except Exception:
                 pass
 
-        # 4. Numerical (float or integer)
+        # 4. Boolean (treated as category)
+        if pd.api.types.is_bool_dtype(series):
+            return "catégorie"
+
+        # 5. Numerical (float or integer)
         if pd.api.types.is_numeric_dtype(series):
             return "nombre"
 
-        # 5. Categorical
+        # 6. Categorical
         return "catégorie"
 
     @staticmethod
@@ -216,8 +220,12 @@ class ProfilingService:
         4. Cohérence (20%)
         5. Équilibre des classes (15%)
         """
-        total_cells = total_rows * len(df.columns)
-        total_nulls = sum(c["null_count"] for c in columns_profile)
+        # Exclure les métadonnées d'augmentation du calcul du score de santé
+        metadata_cols = {"split", "is_synthetic", "origin", "parent_ids"}
+        feature_profiles = [c for c in columns_profile if c["name"] not in metadata_cols]
+
+        total_cells = total_rows * len(feature_profiles)
+        total_nulls = sum(c["null_count"] for c in feature_profiles)
 
         # 1. Complétude (25%)
         if total_cells > 0:
@@ -232,7 +240,7 @@ class ProfilingService:
             uniqueness = 100.0
 
         # 3. Validité (20%): Proportion of non-outlier rows in numeric columns
-        numeric_cols = [c for c in columns_profile if c["detected_type"] == "nombre" and c["stats"]]
+        numeric_cols = [c for c in feature_profiles if c["detected_type"] == "nombre" and c["stats"]]
         if len(numeric_cols) > 0:
             total_numeric_values = sum(total_rows - c["null_count"] for c in numeric_cols)
             total_outliers = sum(c["outlier_count"] for c in numeric_cols)
@@ -244,7 +252,7 @@ class ProfilingService:
             validity = 100.0
 
         # 4. Cohérence (20%): Proportion of syntactically consistent rows in categorical columns
-        cat_cols = [c for c in columns_profile if c["detected_type"] == "catégorie"]
+        cat_cols = [c for c in feature_profiles if c["detected_type"] == "catégorie"]
         if len(cat_cols) > 0 and total_rows > 0:
             total_inconsistent = sum(c.get("inconsistent_rows_count", 0) for c in cat_cols)
             total_cat_values = total_rows * len(cat_cols)
@@ -442,7 +450,7 @@ class ProfilingService:
             inconsistent_examples = []
             inconsistent_rows_count = 0
 
-            if pd.api.types.is_numeric_dtype(series):
+            if pd.api.types.is_numeric_dtype(series) and not pd.api.types.is_bool_dtype(series):
                 clean_s = series.dropna()
                 if len(clean_s) > 0:
                     q1 = float(clean_s.quantile(0.25))
