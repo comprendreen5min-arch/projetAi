@@ -319,6 +319,92 @@ Le module intègre un banc d'essai pour évaluer l'impact réel de l'augmentatio
 
 ---
 
+## 📦 Module 04 : Versioning & Lignage (Versioning)
+
+Le module de versioning constitue le cœur du système *« Git pour la Data »* de Datalift. Il permet de naviguer dans l'historique complet des versions, de comparer en profondeur deux instantanés de données, de requêter des vues virtuelles sans duplication physique de stockage, et d'assurer une gouvernance stricte de la mise en production.
+
+### 1. Graphe DAG de Lignage & Métadonnées Mutables Découplées
+- **Immuabilité absolue des versions** :
+  Chaque enregistrement `DatasetVersion` et son artefact Parquet sous-jacent sont strictement en lecture seule.
+- **Pointeurs et Étiquettes Mutables** :
+  - **Version courante** (`current_version_id`) et **Version de référence (Baseline)** (`baseline_version_id`) peuvent être réassignées à tout moment sans toucher aux données physiques.
+  - L'action **« Restaurer »** redéfinit la version sélectionnée comme version courante sans rien supprimer de l'historique.
+  - **Étiquettes (Tags)** : gérées dans la table séparée `dataset_version_tags` (`production`, `baseline`, `archived`, ou étiquettes personnalisées libres).
+- **« Brancher d'ici » (Draft Branches)** :
+  - Crée une version brouillon dérivée (`is_draft = True`, `branch_name`), avec une date d'échéance à **30 jours d'inutilisation** (`expires_at`), affichée dans l'interface pour le nettoyage du stockage.
+
+### 2. Règles Strictes de Protection contre la Suppression
+La suppression d'une version (`DELETE /api/v1/versions/{hash}`) est **refusée avec un message explicite (HTTP 409 Conflict)** dans les cas suivants :
+1. **Présence d'enfants** : la version possède des versions dérivées dans le graphe de lignage. Les branches descendantes doivent être supprimées d'abord.
+2. **Étiquette Production** : la version porte le tag `production`. L'étiquette doit être retirée manuellement avant suppression.
+3. **Version Baseline** : la version est désignée comme référence active du dataset. Une autre baseline doit être désignée d'abord.
+
+### 3. Comparaison Approfondie de Deux Versions
+L'endpoint `/api/v1/versions/compare` réalise une analyse différentielle exhaustive entre une version source ($V_A$) et une version cible ($V_B$) :
+- **Clé de ligne métier ou empreinte** : détection automatique des identifiants uniques (`customer_id`, `id`) ou hachage de ligne complet pour identifier avec exactitude :
+  - Les lignes **ajoutées** (ex. `+13 899 synthétiques origin = smote`).
+  - Les lignes **retirées** (ex. `-94 978 sous-échantillonnées dans le train`).
+  - Les lignes **modifiées** (différence cellule par cellule sur les identifiants communs).
+- **Évolution de la répartition de la cible** :
+  Calcul de la part de la classe rare avant $\rightarrow$ après (ex. $8\% \rightarrow 30\%$) et confirmation de la préservation de Val/Test.
+- **Vérification de l'Intégrité du Jeu de Test** :
+  - Compare l'empreinte exacte des lignes où `split == 'test'`.
+  - Statuts retournés : `✓ Identique (même empreinte)` ou `⚠️ Modifié` si le test set a été altéré. Si aucune colonne `split` n'existe, le statut est `Non applicable (aucune colonne de split)`.
+
+### 4. Décalage des Distributions (Distribution Shift) & Seuils
+Pour chaque variable commune (hors métadonnées d'augmentation), Datalift calcule un score de décalage normalisé dans $[0 ; 1]$ :
+
+1. **Variables Numériques — Test de Kolmogorov-Smirnov bivarié (KS)** :
+   Mesure la divergence maximale entre les deux fonctions de répartition empiriques cumulées :
+   $$D = \sup_x |F_A(x) - F_B(x)| \in [0 ; 1]$$
+2. **Variables Catégorielles — Total Variation Distance (TVD)** :
+   Demi-somme des écarts absolus des probabilités empiriques :
+   $$\text{TVD} = \frac{1}{2} \sum_{c \in \mathcal{C}} |P_A(c) - P_B(c)| \in [0 ; 1]$$
+
+#### Seuils de Sévérité Documentés :
+| Niveau | Plage de Score | Interprétation |
+| :--- | :--- | :--- |
+| **`HIGH`** | $\ge 0.25$ | Décalage majeur de distribution. Alerte avant mise en production si inattendu. |
+| **`MEDIUM`** | $0.10 \le \text{Score} < 0.25$ | Décalage modéré observable. |
+| **`LOW`** | $0.02 \le \text{Score} < 0.10$ | Variation faible / bruit statistique normal. |
+| **`NONE`** | $< 0.02$ | Distribution quasi-identique. |
+
+#### Décalages Attendus vs Inattendus :
+- **Attendu** : décalage sur la colonne cible (équilibrage délibéré), sur les colonnes numériques bruitées par la recette, ou sur les catégories fusionnées documentées.
+- **Inattendu** : décalage de niveau `HIGH` sur une variable non visée par la recette, signalant une anomalie ou un biais indésirable.
+
+### 5. Diff Ligne par Ligne Paginé
+L'endpoint `/api/v1/versions/diff/rows` pagine les différences ligne par ligne avec filtres :
+- **Onglets** : `Tout`, `Ajoutées`, `Retirées`, `Modifiées`.
+- **Détails de provenance** : pour chaque ligne ajoutée, affiche son tag d'origine et ses parents réels (`smote · 204411+118230`). Pour chaque ligne retirée, affiche la raison (`undersampled · churned no · seed 42`).
+
+### 6. Vues Virtuelles sans Copie (Zero-Copy Virtual Views)
+L'endpoint `/api/v1/versions/{hash}/views/query` permet de filtrer dynamiquement les données sans jamais dupliquer l'espace disque :
+- Filtres combinables : `split` (`train`, `val`, `test`), `origin` (`real`, `smote`), `is_synthetic` (`true`, `false`).
+- Compteurs en temps réel : `All`, `Real only`, `origin = smote`, `Train`, `Val`, `Test`.
+- Export à la volée (`/download-view`) en formats **CSV**, **Parquet**, ou **JSONL**.
+- Commande CLI équivalente : `datalift pull dataset@v3?origin=real`.
+
+### 7. Rejouer une Recette sur un Nouveau Fichier (Replay)
+L'endpoint `/api/v1/versions/{hash}/replay` applique la séquence de transformations enregistrées dans l'arbre généalogique à un nouveau fichier CSV :
+- Si une étape est inapplicable (colonne requise absente, trop peu d'exemples de la classe rare pour le split), l'exécution s'interrompt immédiatement avec une erreur `HTTP 400` expliquant l'étape fautive.
+- Si le nouveau fichier est déjà propre pour une étape donnée (ex. 0 doublon), l'étape no-op est absorbée en toute sécurité.
+
+### 8. Évaluation Réelle des Guardrails & Règle d'Intégrité
+Avant tout étiquetage en production ou suppression, 6 garde-fous sont évalués :
+1. **Versions immuables** : Vérification cryptographique SHA-256 de l'artefact Parquet physique.
+2. **Jeu de test inchangé** : Empreinte de test set identique à la baseline / au parent.
+3. **Versions utilisées protégées** : Statut production ou baseline interdisant la suppression.
+4. **Données personnelles en clair** : **Affiché « Non évalué »** avec motif explicite tant qu'un analyseur PII n'est pas branché (règle stricte : jamais de fausse coche verte).
+5. **Traçabilité de chaque ligne** : 100 % des lignes synthétiques portent `origin` et `parent_ids`.
+6. **Échéance des brouillons** : Indique le nombre de jours restants avant expiration des versions brouillon.
+
+### 9. Carte du Dataset Exportable (Dataset Card)
+L'endpoint `/api/v1/versions/{hash}/card` génère la fiche d'identité complète de la version en **Markdown** et en **JSON** : sources, chaîne de recettes, distributions, taux de synthétique, taille et hash de conformité.
+
+---
+
 ## 🔒 Immuabilité & Reproductibilité
+
 
 Chaque version est scellée par son hash cryptographique. Si une transformation est relancée avec les mêmes données d'entrée et les mêmes paramètres, le système calcule le même hash et garantit la déduplication et l'exactitude des expérimentations d'apprentissage automatique.

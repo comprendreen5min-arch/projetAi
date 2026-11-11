@@ -119,7 +119,28 @@ const TopBar: React.FC = () => {
               <ArrowRight size={14} />
             </button>
           </>
+        ) : location.pathname === '/versioning' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:export-dataset-card'))}
+            >
+              Exporter la carte du dataset
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => navigate('/labeling')}
+            >
+              <span>Continuer vers le labeling</span>
+              <ArrowRight size={14} />
+            </button>
+          </>
         ) : (
+
           <>
             <button
               type="button"
