@@ -513,6 +513,141 @@ export interface DatasetCardResponse {
   json_data: Record<string, any>;
 }
 
+// ==========================================
+// Step 05: Labeling Interfaces
+// ==========================================
+
+export interface FeatureItem {
+  name: string;
+  display_name: string;
+  value: any;
+  is_contradiction: boolean;
+  is_positive_driver: boolean;
+}
+
+export interface CustomerEvent {
+  date: string;
+  event: string;
+  is_highlighted: boolean;
+}
+
+export interface NearestCustomer {
+  customer_id: string;
+  label: string;
+  similarity: number;
+}
+
+export interface BulkPattern {
+  description: string;
+  matching_count: number;
+  matching_row_indices: number[];
+  rule_summary: string;
+}
+
+export interface LabelingCandidate {
+  row_index: number;
+  customer_id: string;
+  split?: string;
+  current_label: string;
+  model_prediction: string;
+  model_probability: number;
+  features: FeatureItem[];
+  history: CustomerEvent[];
+  nearest_customers: NearestCustomer[];
+  bulk_pattern?: BulkPattern | null;
+  label_source: string;
+  smote_children: string;
+  current_decision?: string | null;
+  current_reason?: string | null;
+}
+
+export interface QueueMetric {
+  id: string;
+  title: string;
+  count: number;
+  description: string;
+  done_count: number;
+  button_label: string;
+  is_active: boolean;
+}
+
+export interface LabelingStatusResponse {
+  dataset_id: string;
+  dataset_name: string;
+  source_version_hash: string;
+  source_version_label: string;
+  target_version_label: string;
+  classification_type: string;
+  target_column: string;
+  pos_label: string;
+  neg_label: string;
+  suspected_errors_count: number;
+  rule_conflicts_count: number;
+  done_today_count: number;
+  output_version: string;
+  label_trust_before: number;
+  label_trust_after: number;
+  queues: QueueMetric[];
+  available_target_columns: string[];
+  threshold: number;
+  columns_mode: string;
+  second_review_mode: string;
+}
+
+export interface QueueItemResponse {
+  queue_id: string;
+  total_items: number;
+  current_index: number;
+  candidate?: LabelingCandidate | null;
+  status: LabelingStatusResponse;
+}
+
+export interface LabelCheckItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  count_or_status: string;
+  count?: number | null;
+  action_type: 'fix' | 'view';
+}
+
+export interface RecentChangeItem {
+  id?: string;
+  row_id: string;
+  before: string;
+  after: string;
+  reason: string;
+  author: string;
+  timestamp: string;
+}
+
+export interface LabelingGuardrailItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  passed: boolean;
+  is_warning: boolean;
+}
+
+export interface LabelChecksResponse {
+  checks: LabelCheckItem[];
+  recent_changes: RecentChangeItem[];
+  guardrails: LabelingGuardrailItem[];
+  summary: Record<string, any>;
+}
+
+export interface SaveLabelingVersionResponse {
+  success: boolean;
+  new_version_hash: string;
+  new_version_label: string;
+  parent_version_hash: string;
+  row_count: number;
+  changes_applied: number;
+  augmented: boolean;
+  message: string;
+}
+
+
 
 
 

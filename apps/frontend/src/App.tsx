@@ -6,6 +6,7 @@ import { VersioningPage } from './pages/VersioningPage';
 import { ProfilingPage } from './pages/ProfilingPage';
 import { CleaningPage } from './pages/CleaningPage';
 import { AugmentationPage } from './pages/AugmentationPage';
+import { LabelingPage } from './pages/LabelingPage';
 import { PlaceholderStep } from './pages/PlaceholderStep';
 import { ArrowRight, Download } from 'lucide-react';
 
@@ -139,6 +140,26 @@ const TopBar: React.FC = () => {
               <ArrowRight size={14} />
             </button>
           </>
+        ) : location.pathname === '/labeling' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:target-definition'))}
+            >
+              Définition de la cible
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => navigate('/training')}
+            >
+              <span>Continuer vers le training</span>
+              <ArrowRight size={14} />
+            </button>
+          </>
         ) : (
 
           <>
@@ -196,16 +217,7 @@ export const App: React.FC = () => {
               <Route path="/versioning" element={<VersioningPage />} />
 
               {/* 05. Labeling */}
-              <Route
-                path="/labeling"
-                element={
-                  <PlaceholderStep
-                    stepNumber="05"
-                    title="Labellisation Assistée"
-                    description="Annotation assistée par modèles pré-entraînés et workflows de validation humaine pour les jeux d'apprentissage."
-                  />
-                }
-              />
+              <Route path="/labeling" element={<LabelingPage />} />
 
               {/* 06. Training */}
               <Route

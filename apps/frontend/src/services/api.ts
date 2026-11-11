@@ -21,6 +21,10 @@ import {
   GuardrailItem,
   DatasetCardResponse,
   TagRead,
+  LabelingStatusResponse,
+  QueueItemResponse,
+  LabelChecksResponse,
+  SaveLabelingVersionResponse,
 } from '../types';
 
 
@@ -300,6 +304,102 @@ export const api = {
 
   async getDatasetCard(versionHash: string): Promise<DatasetCardResponse> {
     const res = await apiClient.get<DatasetCardResponse>(`/versions/${versionHash}/card`);
+    return res.data;
+  },
+
+  // ==========================================
+  // Step 05: Labeling
+  // ==========================================
+  async getLabelingStatus(
+    datasetId: string,
+    targetColumn?: string,
+    threshold: number = 0.90
+  ): Promise<LabelingStatusResponse> {
+    const res = await apiClient.get<LabelingStatusResponse>(`/labeling/${datasetId}/status`, {
+      params: {
+        target_column: targetColumn || undefined,
+        threshold,
+      },
+    });
+    return res.data;
+  },
+
+  async getQueueCandidate(
+    datasetId: string,
+    queue: string = 'suspected_errors',
+    index: number = 0,
+    targetColumn?: string,
+    threshold: number = 0.90
+  ): Promise<QueueItemResponse> {
+    const res = await apiClient.get<QueueItemResponse>(`/labeling/${datasetId}/candidate`, {
+      params: {
+        queue,
+        index,
+        target_column: targetColumn || undefined,
+        threshold,
+      },
+    });
+    return res.data;
+  },
+
+  async applyLabelDecision(
+    datasetId: string,
+    data: {
+      rowIndex: number;
+      customerId: string;
+      decision: string;
+      newLabel?: string;
+      reason?: string;
+      queueId?: string;
+    }
+  ): Promise<{ success: boolean; message: string; change_id: string; new_label: string }> {
+    const res = await apiClient.post(`/labeling/${datasetId}/decision`, {
+      row_index: data.rowIndex,
+      customer_id: data.customerId,
+      decision: data.decision,
+      new_label: data.newLabel,
+      reason: data.reason,
+      queue_id: data.queueId || 'suspected_errors',
+    });
+    return res.data;
+  },
+
+  async applyBulkFix(
+    datasetId: string,
+    data: {
+      rowIndices: number[];
+      newLabel: string;
+      reason: string;
+      patternDescription: string;
+    }
+  ): Promise<{ success: boolean; message: string; modified_count: number }> {
+    const res = await apiClient.post(`/labeling/${datasetId}/bulk-fix`, {
+      row_indices: data.rowIndices,
+      new_label: data.newLabel,
+      reason: data.reason,
+      pattern_description: data.patternDescription,
+    });
+    return res.data;
+  },
+
+  async getLabelChecks(datasetId: string): Promise<LabelChecksResponse> {
+    const res = await apiClient.get<LabelChecksResponse>(`/labeling/${datasetId}/checks`);
+    return res.data;
+  },
+
+  async saveLabelingVersion(
+    datasetId: string,
+    data: {
+      rerunAugmentation?: boolean;
+      versionLabel?: string;
+      description?: string;
+    }
+  ): Promise<SaveLabelingVersionResponse> {
+    const res = await apiClient.post<SaveLabelingVersionResponse>(`/labeling/${datasetId}/save-version`, {
+      rerun_augmentation: data.rerunAugmentation ?? false,
+      version_label: data.versionLabel,
+      description: data.description,
+    });
     return res.data;
   },
 };
