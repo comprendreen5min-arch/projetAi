@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
 from pydantic import BaseModel
@@ -10,10 +10,26 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.models.dataset import Dataset
 from app.models.dataset_version import DatasetVersion
-from app.schemas.version import DatasetVersionRead, DatasetVersionDetail
+from app.schemas.version import (
+    DatasetVersionRead,
+    DatasetVersionDetail,
+    TagCreate,
+    TagRead,
+    BranchCreate,
+    CompareRequest,
+    CompareResponse,
+    RowDiffPage,
+    ViewQueryResponse,
+    GuardrailItem,
+    DatasetCardResponse,
+    LineageGraphResponse,
+    VersioningHeaderMetrics,
+)
 from app.services.parquet_service import parquet_service
 from app.services.diff_service import diff_service
 from app.services.profiling_service import profiling_service
+from app.services.versioning_service import versioning_service
+
 
 router = APIRouter()
 
@@ -234,3 +250,205 @@ def download_parquet_file(version_hash: str, db: Session = Depends(get_db)):
         filename=f"{version.dataset.name}_{version.version_hash[:8]}.parquet",
         media_type="application/octet-stream",
     )
+
+
+@router.get("/dataset/{dataset_id}/lineage", response_model=LineageGraphResponse)
+def get_dataset_lineage_via_versions(dataset_id: UUID, db: Session = Depends(get_db)):
+    """Returns the DAG lineage graph for a dataset."""
+    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset non trouvé.")
+    return versioning_service.get_lineage_graph(dataset, db)
+
+
+@router.get("/dataset/{dataset_id}/versioning-header", response_model=VersioningHeaderMetrics)
+def get_dataset_versioning_header_via_versions(dataset_id: UUID, db: Session = Depends(get_db)):
+    """Returns top KPI header metrics for the versioning page."""
+    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset non trouvé.")
+    return versioning_service.get_versioning_header(dataset, db)
+
+
+@router.post("/compare", response_model=CompareResponse)
+def compare_versions_endpoint(payload: CompareRequest, db: Session = Depends(get_db)):
+    """Compares two immutable versions with distribution shifts, row deltas, and test set check."""
+    v_base = db.query(DatasetVersion).filter(DatasetVersion.version_hash == payload.base_version_hash).first()
+    if not v_base:
+        raise HTTPException(status_code=404, detail=f"Version de base '{payload.base_version_hash}' introuvable.")
+
+    v_target = db.query(DatasetVersion).filter(DatasetVersion.version_hash == payload.target_version_hash).first()
+    if not v_target:
+        raise HTTPException(status_code=404, detail=f"Version cible '{payload.target_version_hash}' introuvable.")
+
+    return versioning_service.compare_versions(v_base, v_target, row_key=payload.row_key)
+
+
+@router.get("/diff/rows", response_model=RowDiffPage)
+def get_row_diff_page_endpoint(
+    base_hash: str = Query(...),
+    target_hash: str = Query(...),
+    filter: str = Query("all", pattern="^(all|added|removed|modified)$"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    row_key: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Returns paginated row diffs with filters (all, added, removed, modified)."""
+    v_base = db.query(DatasetVersion).filter(DatasetVersion.version_hash == base_hash).first()
+    if not v_base:
+        raise HTTPException(status_code=404, detail=f"Version de base '{base_hash}' introuvable.")
+
+    v_target = db.query(DatasetVersion).filter(DatasetVersion.version_hash == target_hash).first()
+    if not v_target:
+        raise HTTPException(status_code=404, detail=f"Version cible '{target_hash}' introuvable.")
+
+    return versioning_service.get_row_diff_page(
+        base_version=v_base,
+        target_version=v_target,
+        filter_type=filter,
+        page=page,
+        page_size=page_size,
+        row_key=row_key,
+    )
+
+
+@router.post("/{version_hash}/tags", response_model=TagRead)
+def add_tag_endpoint(version_hash: str, payload: TagCreate, db: Session = Depends(get_db)):
+    """Attaches a tag (e.g. production, baseline, or custom) to an immutable version."""
+    version = db.query(DatasetVersion).filter(DatasetVersion.version_hash == version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{version_hash}' introuvable.")
+    return versioning_service.add_tag(version, payload.tag, db)
+
+
+@router.delete("/{version_hash}/tags/{tag}")
+def remove_tag_endpoint(version_hash: str, tag: str, db: Session = Depends(get_db)):
+    """Removes a tag from an immutable version."""
+    version = db.query(DatasetVersion).filter(DatasetVersion.version_hash == version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{version_hash}' introuvable.")
+    versioning_service.remove_tag(version, tag, db)
+    return {"success": True, "message": f"Tag '{tag}' supprimé de la version {version_hash[:8]}."}
+
+
+@router.post("/{version_hash}/restore")
+def restore_version_endpoint(version_hash: str, db: Session = Depends(get_db)):
+    """Restores version as current active version. Nothing is deleted."""
+    version = db.query(DatasetVersion).filter(DatasetVersion.version_hash == version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{version_hash}' introuvable.")
+    versioning_service.set_current_version(version.dataset, version, db)
+    return {
+        "success": True,
+        "message": f"Version {version_hash[:8]} restaurée comme version courante. Aucune donnée n'a été supprimée.",
+        "current_version_hash": version_hash,
+    }
+
+
+@router.post("/{version_hash}/branch", response_model=DatasetVersionRead)
+def branch_from_version_endpoint(version_hash: str, payload: BranchCreate, db: Session = Depends(get_db)):
+    """Creates a draft branch from this version with a 30-day inactivity expiration."""
+    version = db.query(DatasetVersion).filter(DatasetVersion.version_hash == version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{version_hash}' introuvable.")
+    return versioning_service.create_branch(version, payload.branch_name or "brouillon", payload.description, db)
+
+
+@router.delete("/{version_hash}")
+def delete_version_endpoint(version_hash: str, db: Session = Depends(get_db)):
+    """Safely deletes an immutable version if guardrails pass."""
+    version = db.query(DatasetVersion).filter(DatasetVersion.version_hash == version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{version_hash}' introuvable.")
+    return versioning_service.delete_version_guarded(version, db)
+
+
+@router.get("/{version_hash}/views/query", response_model=ViewQueryResponse)
+def query_view_endpoint(
+    version_hash: str,
+    split: Optional[str] = Query(None),
+    origin: Optional[str] = Query(None),
+    is_synthetic: Optional[bool] = Query(None),
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """Virtual view without duplicating data: filters on the fly and returns counts and sample rows."""
+    version = db.query(DatasetVersion).filter(DatasetVersion.version_hash == version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{version_hash}' introuvable.")
+    return versioning_service.query_view(
+        version=version,
+        split=split,
+        origin=origin,
+        is_synthetic=is_synthetic,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/{version_hash}/download-view")
+def download_view_endpoint(
+    version_hash: str,
+    split: Optional[str] = Query(None),
+    origin: Optional[str] = Query(None),
+    is_synthetic: Optional[bool] = Query(None),
+    format: str = Query("csv", pattern="^(csv|parquet|jsonl)$"),
+    db: Session = Depends(get_db),
+):
+    """Exports a filtered view on the fly without duplicating storage."""
+    version = db.query(DatasetVersion).filter(DatasetVersion.version_hash == version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{version_hash}' introuvable.")
+    data_bytes, filename, media_type = versioning_service.download_view(
+        version=version,
+        split=split,
+        origin=origin,
+        is_synthetic=is_synthetic,
+        file_format=format,
+    )
+    return Response(
+        content=data_bytes,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/{version_hash}/replay")
+async def replay_recipe_endpoint(
+    version_hash: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Replays the recorded recipe chain of this version on a newly uploaded CSV file."""
+    version = db.query(DatasetVersion).filter(DatasetVersion.version_hash == version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{version_hash}' introuvable.")
+
+    content = await file.read()
+    return versioning_service.replay_recipe(
+        target_version=version,
+        new_file_bytes=content,
+        new_filename=file.filename or "replayed.csv",
+        db=db,
+    )
+
+
+@router.get("/{version_hash}/guardrails", response_model=List[GuardrailItem])
+def get_version_guardrails_endpoint(version_hash: str, db: Session = Depends(get_db)):
+    """Evaluates the 6 guardrails in real time against the selected version."""
+    version = db.query(DatasetVersion).filter(DatasetVersion.version_hash == version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{version_hash}' introuvable.")
+    return versioning_service.evaluate_guardrails(version, db)
+
+
+@router.get("/{version_hash}/card", response_model=DatasetCardResponse)
+def get_dataset_card_endpoint(version_hash: str, db: Session = Depends(get_db)):
+    """Generates an exportable dataset card (Markdown + JSON) for this immutable version."""
+    version = db.query(DatasetVersion).filter(DatasetVersion.version_hash == version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{version_hash}' introuvable.")
+    return versioning_service.generate_dataset_card(version, db)
+

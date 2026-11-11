@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, BigInteger, JSON, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Boolean, Column, String, BigInteger, JSON, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 from app.models.base import GUID
@@ -31,6 +31,11 @@ class DatasetVersion(Base):
     row_count = Column(BigInteger, default=0, nullable=False)
     size_bytes = Column(BigInteger, default=0, nullable=False)
     schema_metadata = Column(JSON, nullable=True)
+
+    # Draft / Branch metadata
+    is_draft = Column(Boolean, default=False, nullable=False)
+    branch_name = Column(String(100), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
     
     created_at = Column(
         DateTime(timezone=True),
@@ -39,15 +44,25 @@ class DatasetVersion(Base):
     )
 
     # Relationships
-    dataset = relationship("Dataset", back_populates="versions")
+    dataset = relationship("Dataset", back_populates="versions", foreign_keys=[dataset_id])
     parent_version = relationship("DatasetVersion", remote_side=[id], backref="child_versions")
     
+    # Tags relationship
+    tags = relationship(
+        "DatasetVersionTag",
+        back_populates="version",
+        cascade="all, delete-orphan",
+        order_by="desc(DatasetVersionTag.created_at)",
+    )
+
     # Transformation relationships
     transformation_produced = relationship(
         "Transformation",
         foreign_keys="Transformation.target_version_id",
         back_populates="target_version",
         uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     transformations_consumed = relationship(
         "Transformation",
@@ -55,6 +70,8 @@ class DatasetVersion(Base):
         back_populates="source_version",
     )
 
+
     def __repr__(self):
         return f"<DatasetVersion(hash='{self.version_hash[:8]}...', rows={self.row_count}, created_at={self.created_at})>"
+
 

@@ -13,7 +13,16 @@ import {
   AugmentationApplyResponse,
   AugmentationComparisonRequest,
   AugmentationComparisonResponse,
+  VersioningHeaderMetrics,
+  LineageGraphResponse,
+  CompareResponse,
+  RowDiffPage,
+  ViewQueryResponse,
+  GuardrailItem,
+  DatasetCardResponse,
+  TagRead,
 } from '../types';
+
 
 const API_BASE = '/api/v1';
 
@@ -169,5 +178,130 @@ export const api = {
     const res = await apiClient.post<AugmentationComparisonResponse>('/augmentation/compare', payload);
     return res.data;
   },
+
+  // ==========================================
+  // 04. Versioning Endpoints
+  // ==========================================
+
+  async getLineageGraph(datasetId: string): Promise<LineageGraphResponse> {
+    const res = await apiClient.get<LineageGraphResponse>(`/datasets/${datasetId}/lineage`);
+    return res.data;
+  },
+
+  async getVersioningHeader(datasetId: string): Promise<VersioningHeaderMetrics> {
+    const res = await apiClient.get<VersioningHeaderMetrics>(`/datasets/${datasetId}/versioning-header`);
+    return res.data;
+  },
+
+  async setCurrentVersion(datasetId: string, versionHash: string): Promise<{ success: boolean; current_version_hash: string }> {
+    const res = await apiClient.put(`/datasets/${datasetId}/current-version`, { version_hash: versionHash });
+    return res.data;
+  },
+
+  async setBaselineVersion(datasetId: string, versionHash: string): Promise<{ success: boolean; baseline_version_hash: string }> {
+    const res = await apiClient.put(`/datasets/${datasetId}/baseline-version`, { version_hash: versionHash });
+    return res.data;
+  },
+
+  async addVersionTag(versionHash: string, tag: string): Promise<TagRead> {
+    const res = await apiClient.post<TagRead>(`/versions/${versionHash}/tags`, { tag });
+    return res.data;
+  },
+
+  async removeVersionTag(versionHash: string, tag: string): Promise<{ success: boolean; message: string }> {
+    const res = await apiClient.delete(`/versions/${versionHash}/tags/${tag}`);
+    return res.data;
+  },
+
+  async restoreVersion(versionHash: string): Promise<{ success: boolean; message: string; current_version_hash: string }> {
+    const res = await apiClient.post(`/versions/${versionHash}/restore`);
+    return res.data;
+  },
+
+  async branchFromVersion(versionHash: string, branchName: string, description?: string): Promise<DatasetVersion> {
+    const res = await apiClient.post<DatasetVersion>(`/versions/${versionHash}/branch`, {
+      branch_name: branchName,
+      description,
+    });
+    return res.data;
+  },
+
+  async deleteVersion(versionHash: string): Promise<{ success: boolean; message: string; deleted_hash: string }> {
+    const res = await apiClient.delete(`/versions/${versionHash}`);
+    return res.data;
+  },
+
+  async compareVersions(baseHash: string, targetHash: string, rowKey?: string): Promise<CompareResponse> {
+    const res = await apiClient.post<CompareResponse>('/versions/compare', {
+      base_version_hash: baseHash,
+      target_version_hash: targetHash,
+      row_key: rowKey || null,
+    });
+    return res.data;
+  },
+
+  async getRowDiff(
+    baseHash: string,
+    targetHash: string,
+    filter: 'all' | 'added' | 'removed' | 'modified' = 'all',
+    page: number = 1,
+    pageSize: number = 20,
+    rowKey?: string
+  ): Promise<RowDiffPage> {
+    const res = await apiClient.get<RowDiffPage>('/versions/diff/rows', {
+      params: {
+        base_hash: baseHash,
+        target_hash: targetHash,
+        filter,
+        page,
+        page_size: pageSize,
+        row_key: rowKey || undefined,
+      },
+    });
+    return res.data;
+  },
+
+  async queryView(
+    versionHash: string,
+    params?: { split?: string; origin?: string; is_synthetic?: boolean; limit?: number; offset?: number }
+  ): Promise<ViewQueryResponse> {
+    const res = await apiClient.get<ViewQueryResponse>(`/versions/${versionHash}/views/query`, {
+      params,
+    });
+    return res.data;
+  },
+
+  getViewDownloadUrl(
+    versionHash: string,
+    format: 'csv' | 'parquet' | 'jsonl' = 'csv',
+    params?: { split?: string; origin?: string; is_synthetic?: boolean }
+  ): string {
+    const query = new URLSearchParams();
+    query.set('format', format);
+    if (params?.split) query.set('split', params.split);
+    if (params?.origin) query.set('origin', params.origin);
+    if (params?.is_synthetic !== undefined) query.set('is_synthetic', String(params.is_synthetic));
+    return `${API_BASE}/versions/${versionHash}/download-view?${query.toString()}`;
+  },
+
+  async replayRecipe(versionHash: string, file: File): Promise<{ success: boolean; message: string; created_versions: string[]; final_version_hash: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post(`/versions/${versionHash}/replay`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
+  async getGuardrails(versionHash: string): Promise<GuardrailItem[]> {
+    const res = await apiClient.get<GuardrailItem[]>(`/versions/${versionHash}/guardrails`);
+    return res.data;
+  },
+
+  async getDatasetCard(versionHash: string): Promise<DatasetCardResponse> {
+    const res = await apiClient.get<DatasetCardResponse>(`/versions/${versionHash}/card`);
+    return res.data;
+  },
 };
+
 

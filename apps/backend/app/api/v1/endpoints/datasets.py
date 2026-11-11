@@ -10,10 +10,18 @@ from app.models.dataset import Dataset
 from app.models.dataset_version import DatasetVersion
 from app.models.transformation import Transformation
 from app.schemas.dataset import DatasetCreate, DatasetRead, DatasetDetail, DatasetUpdate
-from app.schemas.version import DatasetVersionRead
+from app.schemas.version import (
+    DatasetVersionRead,
+    LineageGraphResponse,
+    VersioningHeaderMetrics,
+    CurrentVersionUpdate,
+    BaselineVersionUpdate,
+)
 from app.services.parquet_service import parquet_service
 from app.services.storage_service import storage_service
 from app.services.lineage_service import lineage_service
+from app.services.versioning_service import versioning_service
+
 
 router = APIRouter()
 
@@ -325,3 +333,48 @@ async def upload_raw_csv_and_create_dataset(
         )
 
     return get_dataset(dataset_id=dataset.id, db=db)
+
+
+@router.get("/{dataset_id}/lineage", response_model=LineageGraphResponse)
+def get_dataset_lineage(dataset_id: UUID, db: Session = Depends(get_db)):
+    """Returns the DAG lineage graph of versions for a dataset."""
+    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset non trouvé.")
+    return versioning_service.get_lineage_graph(dataset, db)
+
+
+@router.get("/{dataset_id}/versioning-header", response_model=VersioningHeaderMetrics)
+def get_dataset_versioning_header(dataset_id: UUID, db: Session = Depends(get_db)):
+    """Returns top KPI metrics for dataset versioning page."""
+    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset non trouvé.")
+    return versioning_service.get_versioning_header(dataset, db)
+
+
+@router.put("/{dataset_id}/current-version")
+def update_current_version(dataset_id: UUID, payload: CurrentVersionUpdate, db: Session = Depends(get_db)):
+    """Sets current active version of dataset without modifying data."""
+    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset non trouvé.")
+    version = db.query(DatasetVersion).filter(DatasetVersion.dataset_id == dataset_id, DatasetVersion.version_hash == payload.version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{payload.version_hash}' introuvable pour ce dataset.")
+    versioning_service.set_current_version(dataset, version, db)
+    return {"success": True, "current_version_hash": version.version_hash}
+
+
+@router.put("/{dataset_id}/baseline-version")
+def update_baseline_version(dataset_id: UUID, payload: BaselineVersionUpdate, db: Session = Depends(get_db)):
+    """Sets baseline reference version of dataset."""
+    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset non trouvé.")
+    version = db.query(DatasetVersion).filter(DatasetVersion.dataset_id == dataset_id, DatasetVersion.version_hash == payload.version_hash).first()
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version '{payload.version_hash}' introuvable pour ce dataset.")
+    versioning_service.set_baseline_version(dataset, version, db)
+    return {"success": True, "baseline_version_hash": version.version_hash}
+
