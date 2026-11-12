@@ -25,6 +25,12 @@ import {
   QueueItemResponse,
   LabelChecksResponse,
   SaveLabelingVersionResponse,
+  TrainingConfigResponse,
+  TrainingHeaderSummary,
+  TrainingRunListItem,
+  TrainingRunDetailResponse,
+  TrainingCompareResponse,
+  StartRunRequest,
 } from '../types';
 
 
@@ -402,6 +408,63 @@ export const api = {
     });
     return res.data;
   },
+
+  // Step 06: Training
+  async getTrainingConfig(datasetId: string): Promise<TrainingConfigResponse> {
+    const res = await apiClient.get<TrainingConfigResponse>(`/training/${datasetId}/config`);
+    return res.data;
+  },
+
+  async getTrainingHeader(datasetId: string): Promise<TrainingHeaderSummary> {
+    const res = await apiClient.get<TrainingHeaderSummary>(`/training/${datasetId}/header`);
+    return res.data;
+  },
+
+  async getTrainingRuns(datasetId: string, status?: string): Promise<TrainingRunListItem[]> {
+    const params = status ? { status } : {};
+    const res = await apiClient.get<TrainingRunListItem[]>(`/training/${datasetId}/runs`, { params });
+    return res.data;
+  },
+
+  async getTrainingRunDetail(
+    runId: string,
+    split: string = 'val',
+    threshold?: number
+  ): Promise<TrainingRunDetailResponse> {
+    const params: Record<string, any> = { split };
+    if (threshold !== undefined) params.threshold = threshold;
+    const res = await apiClient.get<TrainingRunDetailResponse>(`/training/runs/${runId}`, { params });
+    return res.data;
+  },
+
+  async startTrainingRun(
+    datasetId: string,
+    req: StartRunRequest
+  ): Promise<{ success: boolean; run_id: string; run_name: string }> {
+    const res = await apiClient.post(`/training/${datasetId}/runs`, req);
+    return res.data;
+  },
+
+  async stopTrainingRun(runId: string): Promise<{ success: boolean; message: string }> {
+    const res = await apiClient.post(`/training/runs/${runId}/stop`);
+    return res.data;
+  },
+
+  async evaluateRunOnTest(runId: string): Promise<{ success: boolean; message: string; test_eval_count: number }> {
+    const res = await apiClient.post(`/training/runs/${runId}/evaluate-test`);
+    return res.data;
+  },
+
+  async promoteRun(runId: string): Promise<{ success: boolean; message: string }> {
+    const res = await apiClient.post(`/training/runs/${runId}/promote`);
+    return res.data;
+  },
+
+  async getTrainingCompare(datasetId: string): Promise<TrainingCompareResponse> {
+    const res = await apiClient.get<TrainingCompareResponse>(`/training/${datasetId}/compare`);
+    return res.data;
+  },
 };
+
 
 
