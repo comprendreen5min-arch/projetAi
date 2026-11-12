@@ -7,6 +7,7 @@ from app.models.label_change import LabelChange
 from app.models.training_run import TrainingRun
 from app.models.active_learning import ActiveLearningRound
 from app.models.drift import DriftCheckRun
+from app.models.export_api import ExportApiRun
 
 __all__ = [
     "Base",
@@ -18,6 +19,7 @@ __all__ = [
     "TrainingRun",
     "ActiveLearningRound",
     "DriftCheckRun",
+    "ExportApiRun",
 ]
 
 

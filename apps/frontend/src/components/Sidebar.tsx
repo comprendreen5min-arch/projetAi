@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
+import { api } from '../services/api';
+import { Dataset } from '../types';
 
 interface WorkflowStep {
   number: string;
@@ -21,6 +23,37 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
 ];
 
 export const Sidebar: React.FC = () => {
+  const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [selectedId, setSelectedId] = useState<string>(() => localStorage.getItem('datalift_selected_dataset_id') || '');
+
+  useEffect(() => {
+    api.getDatasets().then(list => {
+      setDatasets(list);
+      if (list.length > 0) {
+        const stored = localStorage.getItem('datalift_selected_dataset_id');
+        const match = list.find(d => d.id === stored);
+        const current = match ? match.id : list[0].id;
+        setSelectedId(current);
+        localStorage.setItem('datalift_selected_dataset_id', current);
+      }
+    }).catch(() => {});
+
+    const onDatasetChange = (e: any) => {
+      if (e.detail && typeof e.detail === 'string') {
+        setSelectedId(e.detail);
+      }
+    };
+    window.addEventListener('datalift:dataset-changed', onDatasetChange);
+    return () => window.removeEventListener('datalift:dataset-changed', onDatasetChange);
+  }, []);
+
+  const handleSelect = (id: string) => {
+    setSelectedId(id);
+    localStorage.setItem('datalift_selected_dataset_id', id);
+    window.dispatchEvent(new CustomEvent('datalift:dataset-changed', { detail: id }));
+  };
+
+
   return (
     <aside className="sidebar">
       {/* Brand Logo in Serif with amber dot */}
@@ -29,14 +62,44 @@ export const Sidebar: React.FC = () => {
         <span className="sidebar-logo-dot" />
       </div>
 
-      {/* Project Selector (1 entry by default) */}
+      {/* Project Selector */}
       <div className="sidebar-section">
         <div className="sidebar-label font-mono">PROJECT</div>
-        <div className="project-selector">
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Mon projet
-          </span>
-          <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+        <div style={{ position: 'relative' }}>
+          <select
+            value={selectedId}
+            onChange={e => handleSelect(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.55rem 1.8rem 0.55rem 0.75rem',
+              backgroundColor: '#121316',
+              border: '1px solid var(--border)',
+              borderRadius: '6px',
+              color: 'var(--text-main)',
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              appearance: 'none',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {datasets.map(d => (
+              <option key={d.id} value={d.id} style={{ background: '#121316', color: '#e5e7eb' }}>
+                {d.name === 'data' ? 'Churn prediction' : d.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            size={14}
+            style={{
+              position: 'absolute',
+              right: 10,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-muted)',
+              pointerEvents: 'none',
+            }}
+          />
         </div>
       </div>
 

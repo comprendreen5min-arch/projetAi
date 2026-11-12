@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import datasets, versions, transformations, cleaning, augmentation, labeling, training, active_learning, drift
+from app.api.v1.endpoints import datasets, versions, transformations, cleaning, augmentation, labeling, training, active_learning, drift, export_api
 
 api_router = APIRouter()
 
@@ -12,6 +12,7 @@ api_router.include_router(labeling.router, prefix="/labeling", tags=["Labeling"]
 api_router.include_router(training.router, prefix="/training", tags=["Training"])
 api_router.include_router(active_learning.router, prefix="/active-learning", tags=["Active Learning"])
 api_router.include_router(drift.router, prefix="/drift", tags=["Drift"])
+api_router.include_router(export_api.router, prefix="/export-api", tags=["Export API"])
 
 
 

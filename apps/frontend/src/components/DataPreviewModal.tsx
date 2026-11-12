@@ -71,7 +71,7 @@ export const DataPreviewModal: React.FC<DataPreviewModalProps> = ({ versionHash,
               <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                 <div className="card" style={{ flex: 1, minWidth: '140px', padding: '0.85rem 1rem' }}>
                   <span className="font-mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Lignes</span>
-                  <p className="font-mono" style={{ fontSize: '1.25rem', fontWeight: 600, marginTop: 2 }}>{version.row_count.toLocaleString()}</p>
+                  <p className="font-mono" style={{ fontSize: '1.25rem', fontWeight: 600, marginTop: 2 }}>{(version.row_count ?? 0).toLocaleString()}</p>
                 </div>
                 <div className="card" style={{ flex: 1, minWidth: '140px', padding: '0.85rem 1rem' }}>
                   <span className="font-mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Colonnes</span>

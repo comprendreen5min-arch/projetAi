@@ -10,7 +10,7 @@ import { LabelingPage } from './pages/LabelingPage';
 import { TrainingPage } from './pages/TrainingPage';
 import { ActiveLearningPage } from './pages/ActiveLearningPage';
 import { DriftPage } from './pages/DriftPage';
-import { PlaceholderStep } from './pages/PlaceholderStep';
+import { ExportApiPage } from './pages/ExportApiPage';
 import { ArrowRight, Download } from 'lucide-react';
 
 // Top bar matching the target mockup
@@ -223,6 +223,25 @@ const TopBar: React.FC = () => {
               <ArrowRight size={14} />
             </button>
           </>
+        ) : location.pathname === '/export-api' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-version-history'))}
+            >
+              Version history
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:deploy-to-staging'))}
+            >
+              <span>Deploy to staging →</span>
+            </button>
+          </>
         ) : (
 
           <>
@@ -292,16 +311,7 @@ export const App: React.FC = () => {
               <Route path="/drift" element={<DriftPage />} />
 
               {/* 09. Export / API */}
-              <Route
-                path="/export-api"
-                element={
-                  <PlaceholderStep
-                    stepNumber="09"
-                    title="Export & Déploiement API"
-                    description="Exportation des artefacts et exposition d'endpoints d'inférence sécurisés pour les applications clientes."
-                  />
-                }
-              />
+              <Route path="/export-api" element={<ExportApiPage />} />
 
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/versioning" replace />} />

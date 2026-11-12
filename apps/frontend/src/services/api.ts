@@ -38,6 +38,9 @@ import {
   DriftStateResponse,
   UpdateDriftSettingsRequest,
   RunDriftCheckResponse,
+  ExportApiStateResponse,
+  UpdateExportSettingsRequest,
+  DeployToStagingResponse,
 } from '../types';
 
 
@@ -510,6 +513,34 @@ export const api = {
 
   async runDriftCheckNow(datasetId: string): Promise<RunDriftCheckResponse> {
     const res = await apiClient.post<RunDriftCheckResponse>(`/drift/${datasetId}/check-now`);
+    return res.data;
+  },
+
+  // Export / API
+  async getExportApiState(datasetId: string): Promise<ExportApiStateResponse> {
+    const res = await apiClient.get<ExportApiStateResponse>(`/export-api/${datasetId}/state`);
+    return res.data;
+  },
+
+  async updateExportSettings(
+    datasetId: string,
+    req: UpdateExportSettingsRequest
+  ): Promise<ExportApiStateResponse> {
+    const res = await apiClient.put<ExportApiStateResponse>(`/export-api/${datasetId}/settings`, req);
+    return res.data;
+  },
+
+  async deployToStaging(datasetId: string): Promise<DeployToStagingResponse> {
+    const res = await apiClient.post<DeployToStagingResponse>(`/export-api/${datasetId}/deploy-staging`);
+    return res.data;
+  },
+
+  async createApiKey(
+    datasetId: string,
+    name: string,
+    scope: string
+  ): Promise<{ key: string; name: string; scope: string; status: string }> {
+    const res = await apiClient.post(`/export-api/${datasetId}/api-keys`, { name, scope });
     return res.data;
   },
 };

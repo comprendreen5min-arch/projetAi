@@ -96,7 +96,7 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                         {(ver.size_bytes / 1024).toFixed(1)} KB
                       </span>
                       <span>
-                        <strong style={{ color: 'var(--text-main)' }}>{ver.row_count.toLocaleString()}</strong> lignes
+                        <strong style={{ color: 'var(--text-main)' }}>{(ver.row_count ?? 0).toLocaleString()}</strong> lignes
                       </span>
                       {ver.transformation_produced && (
                         <span>
