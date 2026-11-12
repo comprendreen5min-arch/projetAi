@@ -7,6 +7,7 @@ import { ProfilingPage } from './pages/ProfilingPage';
 import { CleaningPage } from './pages/CleaningPage';
 import { AugmentationPage } from './pages/AugmentationPage';
 import { LabelingPage } from './pages/LabelingPage';
+import { TrainingPage } from './pages/TrainingPage';
 import { PlaceholderStep } from './pages/PlaceholderStep';
 import { ArrowRight, Download } from 'lucide-react';
 
@@ -160,6 +161,26 @@ const TopBar: React.FC = () => {
               <ArrowRight size={14} />
             </button>
           </>
+        ) : location.pathname === '/training' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:compare-runs'))}
+            >
+              Comparer les runs
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => navigate('/active-learning')}
+            >
+              <span>Continuer vers l'apprentissage actif</span>
+              <ArrowRight size={14} />
+            </button>
+          </>
         ) : (
 
           <>
@@ -220,16 +241,7 @@ export const App: React.FC = () => {
               <Route path="/labeling" element={<LabelingPage />} />
 
               {/* 06. Training */}
-              <Route
-                path="/training"
-                element={
-                  <PlaceholderStep
-                    stepNumber="06"
-                    title="Entraînement de Modèles"
-                    description="Orchestration d'expérimentations d'apprentissage automatique, gestion des hyperparamètres et suivi des métriques."
-                  />
-                }
-              />
+              <Route path="/training" element={<TrainingPage />} />
 
               {/* 07. Active learning */}
               <Route

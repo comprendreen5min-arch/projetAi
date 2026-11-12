@@ -4,7 +4,16 @@ from app.models.dataset_version import DatasetVersion
 from app.models.transformation import Transformation
 from app.models.dataset_version_tag import DatasetVersionTag
 from app.models.label_change import LabelChange
+from app.models.training_run import TrainingRun
 
-__all__ = ["Base", "Dataset", "DatasetVersion", "Transformation", "DatasetVersionTag", "LabelChange"]
+__all__ = [
+    "Base",
+    "Dataset",
+    "DatasetVersion",
+    "Transformation",
+    "DatasetVersionTag",
+    "LabelChange",
+    "TrainingRun",
+]
 
 

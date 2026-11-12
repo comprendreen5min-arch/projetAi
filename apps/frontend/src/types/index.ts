@@ -647,6 +647,197 @@ export interface SaveLabelingVersionResponse {
   message: string;
 }
 
+// ==========================================
+// Step 06: Training Interfaces
+// ==========================================
+
+export interface TrainingPreRunChecks {
+  test_hash: string;
+  test_rows: number;
+  smote_rows_in_train: number;
+  smote_in_val_or_test: number;
+  leak_columns_found: string[];
+  baseline_included: boolean;
+  no_pii: boolean;
+}
+
+export interface TrainingFeatureConfig {
+  name: string;
+  treatment: string;
+  is_leak: boolean;
+  is_id: boolean;
+}
+
+export interface TrainingConfigResponse {
+  dataset_version: string;
+  train_view: string;
+  splits_summary: string;
+  left_out_count: number;
+  available_models: string[];
+  target_column: string;
+  positive_class: string;
+  available_targets: string[];
+  available_pos_classes: string[];
+  features: TrainingFeatureConfig[];
+  checks: TrainingPreRunChecks;
+  cli_command: string;
+}
+
+export interface TrainingGuardrail {
+  id: string;
+  title: string;
+  subtitle: string;
+  passed: boolean;
+  is_warning?: boolean;
+}
+
+export interface TrainingHeaderSummary {
+  dataset_id: string;
+  dataset_name: string;
+  total_runs: number;
+  running_count: number;
+  failed_count: number;
+  data_version_label: string;
+  labels_fixed_since_v3: number;
+  compute_cpu_hours: number;
+  budget_hours: number;
+  production_run_name: string;
+  production_trained_date: string;
+  candidate_run_number: string;
+  candidate_run_name: string;
+  guardrails: TrainingGuardrail[];
+}
+
+export interface TrainingRunListItem {
+  id: string;
+  run_name: string;
+  data_version: string;
+  model_type: string;
+  status: 'running' | 'done' | 'failed';
+  current_trial?: number | null;
+  total_trials?: number | null;
+  recall_val?: number | null;
+  execution_time_display: string;
+  tag?: string | null;
+  is_comparable: boolean;
+}
+
+export interface ConfusionMatrixData {
+  actual_yes_pred_yes: number;
+  actual_yes_pred_no: number;
+  actual_no_pred_yes: number;
+  actual_no_pred_no: number;
+  threshold: number;
+}
+
+export interface PRCurvePoint {
+  recall: number;
+  precision: number;
+  threshold: number;
+}
+
+export interface ThresholdCostData {
+  threshold: number;
+  cost_missed: number;
+  cost_retention: number;
+  flagged_per_month: number;
+  cost_per_month: number;
+  pr_curve: PRCurvePoint[];
+}
+
+export interface FeatureDriver {
+  feature: string;
+  importance: number;
+  shap_value: number;
+}
+
+export interface SliceItem {
+  segment: string;
+  rows: number;
+  recall_yes: number;
+  flag?: 'weak' | 'too_few' | 'ok';
+}
+
+export interface ErrorToInspect {
+  customer_id: string;
+  label: string;
+  prob_yes: number;
+  why_wrong: string;
+  category: string;
+  action: string;
+}
+
+export interface TrainingRunDetailResponse {
+  id: string;
+  run_name: string;
+  data_version: string;
+  model_type: string;
+  status: string;
+  tag?: string | null;
+  current_trial?: number | null;
+  total_trials?: number | null;
+  eta_minutes?: number | null;
+  trial_history: Array<{ trial: number; score: number; best_so_far: number }>;
+  recent_logs: string[];
+  split_evaluated: string;
+  val_rows: number;
+  test_rows: number;
+  test_locked: boolean;
+  test_eval_count: number;
+  recall_yes: number;
+  precision_yes: number;
+  pr_auc: number;
+  calibration_error: number;
+  threshold_cost: ThresholdCostData;
+  confusion_matrix: ConfusionMatrixData;
+  feature_drivers: FeatureDriver[];
+  slices: SliceItem[];
+  errors: ErrorToInspect[];
+}
+
+export interface CompareRow {
+  metric_name: string;
+  prod_val: string;
+  cand_val: string;
+  change: string;
+  is_positive: boolean;
+}
+
+export interface PromotionChecklist {
+  same_test_set: boolean;
+  beats_production: boolean;
+  no_slice_drops: boolean;
+  model_card_generated: boolean;
+  approved_by_second_person: boolean;
+}
+
+export interface TrainingCompareResponse {
+  prod_run_name: string;
+  cand_run_name: string;
+  test_set_hash: string;
+  test_set_rows: number;
+  comparison_table: CompareRow[];
+  checklist: PromotionChecklist;
+  replay_command: string;
+}
+
+export interface StartRunRequest {
+  dataset_version: string;
+  train_view: string;
+  target_column: string;
+  positive_class: string;
+  optimize_metric: string;
+  precision_constraint?: number;
+  models_to_try: string[];
+  search_method: string;
+  trials: number;
+  time_limit_minutes: number;
+  stop_if_no_gain_trials?: number;
+  worker_type?: string;
+  seed: number;
+}
+
+
 
 
 
