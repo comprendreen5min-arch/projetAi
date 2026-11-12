@@ -31,6 +31,10 @@ import {
   TrainingRunDetailResponse,
   TrainingCompareResponse,
   StartRunRequest,
+  ActiveLearningStateResponse,
+  UpdateRoundSettingsRequest,
+  SendToLabelingRequest,
+  SendToLabelingResponse,
 } from '../types';
 
 
@@ -462,6 +466,28 @@ export const api = {
 
   async getTrainingCompare(datasetId: string): Promise<TrainingCompareResponse> {
     const res = await apiClient.get<TrainingCompareResponse>(`/training/${datasetId}/compare`);
+    return res.data;
+  },
+
+  // Active Learning
+  async getActiveLearningState(datasetId: string): Promise<ActiveLearningStateResponse> {
+    const res = await apiClient.get<ActiveLearningStateResponse>(`/active-learning/${datasetId}/state`);
+    return res.data;
+  },
+
+  async updateActiveLearningSettings(
+    datasetId: string,
+    req: UpdateRoundSettingsRequest
+  ): Promise<ActiveLearningStateResponse> {
+    const res = await apiClient.put<ActiveLearningStateResponse>(`/active-learning/${datasetId}/settings`, req);
+    return res.data;
+  },
+
+  async sendPicksToLabeling(
+    datasetId: string,
+    req: SendToLabelingRequest
+  ): Promise<SendToLabelingResponse> {
+    const res = await apiClient.post<SendToLabelingResponse>(`/active-learning/${datasetId}/send-to-labeling`, req);
     return res.data;
   },
 };

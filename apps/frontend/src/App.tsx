@@ -8,6 +8,7 @@ import { CleaningPage } from './pages/CleaningPage';
 import { AugmentationPage } from './pages/AugmentationPage';
 import { LabelingPage } from './pages/LabelingPage';
 import { TrainingPage } from './pages/TrainingPage';
+import { ActiveLearningPage } from './pages/ActiveLearningPage';
 import { PlaceholderStep } from './pages/PlaceholderStep';
 import { ArrowRight, Download } from 'lucide-react';
 
@@ -181,6 +182,26 @@ const TopBar: React.FC = () => {
               <ArrowRight size={14} />
             </button>
           </>
+        ) : location.pathname === '/active-learning' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-round-history'))}
+            >
+              Historique des cycles
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => navigate('/drift')}
+            >
+              <span>Continuer vers la dérive</span>
+              <ArrowRight size={14} />
+            </button>
+          </>
         ) : (
 
           <>
@@ -244,16 +265,7 @@ export const App: React.FC = () => {
               <Route path="/training" element={<TrainingPage />} />
 
               {/* 07. Active learning */}
-              <Route
-                path="/active-learning"
-                element={
-                  <PlaceholderStep
-                    stepNumber="07"
-                    title="Apprentissage Actif"
-                    description="Sélection intelligente des échantillons les plus incertains à annoter en priorité pour maximiser le gain de performance."
-                  />
-                }
-              />
+              <Route path="/active-learning" element={<ActiveLearningPage />} />
 
               {/* 08. Drift */}
               <Route
