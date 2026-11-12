@@ -19,10 +19,11 @@ class DriftHeaderSummary(BaseModel):
 
 
 class DriftTimelinePoint(BaseModel):
+    model_config = {"extra": "allow"}
     date: str
-    contract: float
-    monthly_charges: float
-    city: float
+    contract: float = 0.0
+    monthly_charges: float = 0.0
+    city: float = 0.0
 
 
 class DriftTimelineResponse(BaseModel):

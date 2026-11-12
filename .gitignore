@@ -124,12 +124,33 @@ $RECYCLE.BIN/
 *.temp
 *.bak
 
-# Reports & export downloads
+# Reports & export downloads (Step 09 Export / API)
 *drift-report*.json
 *audit-report*.json
 datalift-drift-*.json
 model-export/
+datalift-export-*/
+model-package-*/
+apps/backend/storage/exports/*
+apps/backend/storage/models/*
+api_keys.json
+*.secret
+*.token
+*.jsonl
+*.xlsx
+*.feather
+*.arrow
+*.tar
 *.tar.gz
+*.zip
+
+# Cache, build & patch artifacts
+.turbo/
+.cache/
+.parcel-cache/
+*.orig
+*.rej
+*.patch
 
 # Test screenshots & browser automation artifacts
 *screenshot*.png

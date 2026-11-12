@@ -272,7 +272,7 @@ export const ProfilingPage: React.FC = () => {
             >
               {versions.map((v, i) => (
                 <option key={v.id} value={v.version_hash}>
-                  #{v.version_hash.slice(0, 8)} {i === 0 ? '(Dernière)' : ''} — {v.row_count.toLocaleString()} lignes
+                  #{v.version_hash.slice(0, 8)} {i === 0 ? '(Dernière)' : ''} — {(v.row_count ?? 0).toLocaleString()} lignes
                 </option>
               ))}
             </select>

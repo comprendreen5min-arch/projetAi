@@ -1007,6 +1007,7 @@ export interface DriftTimelinePoint {
 }
 
 export interface DriftTimelineResponse {
+  columns?: string[];
   points: DriftTimelinePoint[];
   annotation_date: string;
   watch_threshold: number;
@@ -1124,3 +1125,128 @@ export interface RunDriftCheckResponse {
   checked_at: string;
 }
 
+
+export interface ExportHeaderSummary {
+  breadcrumb: string;
+  candidate_model: string;
+  production_model: string;
+  model_type: string;
+  threshold: number;
+  data_version: string;
+  versions_live: number;
+  endpoint: string;
+  calls_7d: string;
+  approved_step: string;
+  feature_columns: string[];
+  target_column: string;
+  dataset_name: string;
+}
+
+export interface DatasetVersionExportItem {
+  version_label: string;
+  row_count: string;
+  made_from: string;
+  state: string;
+  is_current: boolean;
+  is_tagged: boolean;
+}
+
+export interface ExportDatasetOptions {
+  keep_splits: boolean;
+  mask_pii: boolean;
+  include_smote: boolean;
+  add_label_history: boolean;
+  include_not_yet: boolean;
+}
+
+export interface ExportFormatOption {
+  format_id: string;
+  name: string;
+  description: string;
+  tag: string;
+  is_selected: boolean;
+}
+
+export interface ExportDeployStep {
+  step_number: number;
+  title: string;
+  status: string;
+  detail: string;
+}
+
+export interface ExportDeployOption {
+  option_id: string;
+  title: string;
+  description: string;
+  is_selected: boolean;
+}
+
+export interface ExportApiKey {
+  name: string;
+  key_masked: string;
+  scope: string;
+  status: string;
+  last_used: string;
+}
+
+export interface ExportWebhookEvent {
+  event_name: string;
+  description: string;
+  enabled: boolean;
+}
+
+export interface ExportVersionTrafficRow {
+  model_name: string;
+  runs_on: string;
+  status: string;
+  traffic_pct: number;
+  p95_ms: number;
+  error_rate: number;
+  action: string;
+}
+
+export interface ExportGuardrailItem {
+  id: string;
+  status: string;
+  title: string;
+  description: string;
+}
+
+export interface ExportApiStateResponse {
+  header: ExportHeaderSummary;
+  dataset_versions: DatasetVersionExportItem[];
+  export_options: ExportDatasetOptions;
+  selected_data_format: string;
+  dataset_formats: ExportFormatOption[];
+  model_package_formats: ExportFormatOption[];
+  selected_model_format: string;
+  deploy_steps: ExportDeployStep[];
+  deploy_options: ExportDeployOption[];
+  selected_deploy_option: string;
+  api_keys: ExportApiKey[];
+  webhook_events: ExportWebhookEvent[];
+  version_traffic: ExportVersionTrafficRow[];
+  guardrails: ExportGuardrailItem[];
+  endpoint_url: string;
+  python_snippet: string;
+  rest_snippet: string;
+  cli_snippet: string;
+  curl_snippet: string;
+  js_snippet: string;
+  python_req_snippet?: string;
+  json_response_snippet: string;
+}
+
+export interface UpdateExportSettingsRequest {
+  data_format?: string;
+  model_format?: string;
+  deploy_target?: string;
+  export_options?: ExportDatasetOptions;
+}
+
+export interface DeployToStagingResponse {
+  success: boolean;
+  message: string;
+  endpoint_url: string;
+  model_name: string;
+}

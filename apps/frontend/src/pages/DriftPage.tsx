@@ -63,14 +63,25 @@ export const DriftPage: React.FC = () => {
       .then((data) => {
         setDatasets(data);
         if (data.length > 0) {
-          const defaultDs = data.find((d) => d.name === 'data' || d.name === 'customer_churn.csv') || data[0];
+          const stored = localStorage.getItem('datalift_selected_dataset_id');
+          const match = data.find((d) => d.id === stored);
+          const defaultDs = match || data.find((d) => d.name === 'data' || d.name === 'customer_churn.csv') || data[0];
           setSelectedDatasetId(defaultDs.id);
+          localStorage.setItem('datalift_selected_dataset_id', defaultDs.id);
         }
       })
       .catch((err) => {
         console.error('Error fetching datasets:', err);
         showToast('Erreur lors du chargement des jeux de données.', 'error');
       });
+
+    const onGlobalChange = (e: any) => {
+      if (e.detail && typeof e.detail === 'string') {
+        setSelectedDatasetId(e.detail);
+      }
+    };
+    window.addEventListener('datalift:dataset-changed', onGlobalChange);
+    return () => window.removeEventListener('datalift:dataset-changed', onGlobalChange);
   }, []);
 
   // Load drift state for selected dataset
@@ -250,7 +261,12 @@ export const DriftPage: React.FC = () => {
               <div style={{ position: 'relative', display: 'inline-block' }}>
                 <select
                   value={selectedDatasetId}
-                  onChange={(e) => setSelectedDatasetId(e.target.value)}
+                  onChange={(e) => {
+                    const newId = e.target.value;
+                    setSelectedDatasetId(newId);
+                    localStorage.setItem('datalift_selected_dataset_id', newId);
+                    window.dispatchEvent(new CustomEvent('datalift:dataset-changed', { detail: newId }));
+                  }}
                   style={{
                     backgroundColor: '#18191c',
                     color: '#e5e7eb',
@@ -381,15 +397,15 @@ export const DriftPage: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem', fontSize: '0.75rem', fontFamily: 'var(--font-mono, monospace)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f59e0b' }}>
                 <span style={{ display: 'inline-block', width: '18px', height: '2px', backgroundColor: '#f59e0b' }} />
-                <span>contract</span>
+                <span>{state.timeline?.columns?.[0] || 'contract'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ef4444' }}>
                 <span style={{ display: 'inline-block', width: '18px', height: '2px', backgroundColor: '#ef4444' }} />
-                <span>monthly_charges</span>
+                <span>{state.timeline?.columns?.[1] || 'monthly_charges'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#a1a1aa' }}>
                 <span style={{ display: 'inline-block', width: '18px', borderTop: '2px dashed #71717a' }} />
-                <span>city</span>
+                <span>{state.timeline?.columns?.[2] || 'city'}</span>
               </div>
             </div>
 
@@ -864,7 +880,7 @@ export const DriftPage: React.FC = () => {
                       {seg.rows_count != null ? seg.rows_count.toLocaleString() : '—'}
                     </td>
                     <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontFamily: 'var(--font-mono, monospace)', color: '#f59e0b' }}>
-                      {Math.round(seg.recall_yes_est * 100)}%
+                      {seg.recall_yes_est != null ? `${Math.round(seg.recall_yes_est * 100)}%` : '[RESULT]'}
                     </td>
                     <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
                       <span
