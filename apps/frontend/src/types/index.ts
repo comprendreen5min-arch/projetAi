@@ -977,3 +977,150 @@ export interface SendToLabelingResponse {
   rows_enqueued: number;
   dataset_id: string;
 }
+
+// ==========================================
+// Step 08: Drift & Monitoring Interfaces
+// ==========================================
+
+export interface DriftHeaderSummary {
+  dataset_id: string;
+  dataset_name: string;
+  production_model_name: string;
+  reference_version_label: string;
+  reference_subtitle: string;
+  live_window_label: string;
+  live_window_subtitle: string;
+  signals_watched_count: string;
+  signals_watched_subtitle: string;
+  last_check_time: string;
+  last_check_subtitle: string;
+  drifting_columns_count: number;
+  drifting_columns: string[];
+}
+
+export interface DriftTimelinePoint {
+  date: string;
+  contract?: number;
+  monthly_charges?: number;
+  city?: number;
+  [key: string]: any;
+}
+
+export interface DriftTimelineResponse {
+  points: DriftTimelinePoint[];
+  annotation_date: string;
+  watch_threshold: number;
+  drift_threshold: number;
+}
+
+export interface SignalBarItem {
+  name: string;
+  pct: number;
+}
+
+export interface SignalInspectorData {
+  signal_name: string;
+  kind: string;
+  test_type: string;
+  is_drift: boolean;
+  description: string;
+  train_bars: SignalBarItem[];
+  live_bars: SignalBarItem[];
+  relies_on_columns: string[];
+}
+
+export interface DriftSignalItem {
+  signal: string;
+  kind: string;
+  test: string;
+  what_changed: string;
+  weight: string;
+  is_drift: boolean;
+  inspector: SignalInspectorData;
+}
+
+export interface DataQualityCheckItem {
+  id: string;
+  check_type: string;
+  where_column: string;
+  live_val: string;
+  expected_val: string;
+  status: 'FAIL' | 'WARN' | 'PASS';
+  action_button?: string | null;
+}
+
+export interface ImpactSegmentRow {
+  segment_name: string;
+  rows_count: number;
+  recall_yes_est: number;
+  flag: 'DRIFT' | 'NEW' | 'WATCH' | 'OK';
+}
+
+export interface ModelImpactData {
+  recall_yes_estimated: number;
+  scored_yes_live_pct: number;
+  scored_yes_train_pct: number;
+  recall_yes_measured?: number | null;
+  segments: ImpactSegmentRow[];
+}
+
+export interface ActionDecisionCard {
+  category: string;
+  title: string;
+  description: string;
+  button_label: string;
+  action_type: string;
+  is_recommended: boolean;
+}
+
+export interface MonitoringThresholds {
+  psi_watch: number;
+  psi_drift: number;
+  window_days: number;
+  min_rows: number;
+  email_alerts: boolean;
+  slack_alerts: boolean;
+  webhook_url?: string | null;
+}
+
+export interface DriftGuardrailItem {
+  id: string;
+  status: 'ok' | 'warning';
+  title: string;
+  description: string;
+}
+
+export interface DriftStateResponse {
+  header: DriftHeaderSummary;
+  timeline: DriftTimelineResponse;
+  signals: DriftSignalItem[];
+  quality_checks: DataQualityCheckItem[];
+  quality_summary: {
+    failed: number;
+    to_review: number;
+    passed: number;
+  };
+  model_impact: ModelImpactData;
+  decisions: ActionDecisionCard[];
+  thresholds: MonitoringThresholds;
+  cli_command: string;
+  guardrails: DriftGuardrailItem[];
+}
+
+export interface UpdateDriftSettingsRequest {
+  psi_watch?: number;
+  psi_drift?: number;
+  window_days?: number;
+  min_rows?: number;
+  email_alerts?: boolean;
+  slack_alerts?: boolean;
+  webhook_url?: string;
+}
+
+export interface RunDriftCheckResponse {
+  success: boolean;
+  message: string;
+  drifting_columns_count: number;
+  checked_at: string;
+}
+

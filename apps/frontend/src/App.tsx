@@ -9,6 +9,7 @@ import { AugmentationPage } from './pages/AugmentationPage';
 import { LabelingPage } from './pages/LabelingPage';
 import { TrainingPage } from './pages/TrainingPage';
 import { ActiveLearningPage } from './pages/ActiveLearningPage';
+import { DriftPage } from './pages/DriftPage';
 import { PlaceholderStep } from './pages/PlaceholderStep';
 import { ArrowRight, Download } from 'lucide-react';
 
@@ -202,6 +203,26 @@ const TopBar: React.FC = () => {
               <ArrowRight size={14} />
             </button>
           </>
+        ) : location.pathname === '/drift' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-drift-history'))}
+            >
+              Historique de dérive
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => navigate('/export-api')}
+            >
+              <span>Continuer vers l'export</span>
+              <ArrowRight size={14} />
+            </button>
+          </>
         ) : (
 
           <>
@@ -268,16 +289,7 @@ export const App: React.FC = () => {
               <Route path="/active-learning" element={<ActiveLearningPage />} />
 
               {/* 08. Drift */}
-              <Route
-                path="/drift"
-                element={
-                  <PlaceholderStep
-                    stepNumber="08"
-                    title="Surveillance de Dérive"
-                    description="Détection en continu de la dérive des données (data drift) et de la dérive de concept (concept drift) en production."
-                  />
-                }
-              />
+              <Route path="/drift" element={<DriftPage />} />
 
               {/* 09. Export / API */}
               <Route

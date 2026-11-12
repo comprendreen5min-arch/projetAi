@@ -124,5 +124,18 @@ $RECYCLE.BIN/
 *.temp
 *.bak
 
+# Reports & export downloads
+*drift-report*.json
+*audit-report*.json
+datalift-drift-*.json
+model-export/
+*.tar.gz
+
+# Test screenshots & browser automation artifacts
+*screenshot*.png
+tmp_edge/
+test-results/
+playwright-report/
+
 # Docker
 docker-compose.override.yml
