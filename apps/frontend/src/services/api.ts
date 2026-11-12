@@ -35,6 +35,9 @@ import {
   UpdateRoundSettingsRequest,
   SendToLabelingRequest,
   SendToLabelingResponse,
+  DriftStateResponse,
+  UpdateDriftSettingsRequest,
+  RunDriftCheckResponse,
 } from '../types';
 
 
@@ -488,6 +491,25 @@ export const api = {
     req: SendToLabelingRequest
   ): Promise<SendToLabelingResponse> {
     const res = await apiClient.post<SendToLabelingResponse>(`/active-learning/${datasetId}/send-to-labeling`, req);
+    return res.data;
+  },
+
+  // Drift & Monitoring
+  async getDriftState(datasetId: string): Promise<DriftStateResponse> {
+    const res = await apiClient.get<DriftStateResponse>(`/drift/${datasetId}/state`);
+    return res.data;
+  },
+
+  async updateDriftSettings(
+    datasetId: string,
+    req: UpdateDriftSettingsRequest
+  ): Promise<DriftStateResponse> {
+    const res = await apiClient.put<DriftStateResponse>(`/drift/${datasetId}/settings`, req);
+    return res.data;
+  },
+
+  async runDriftCheckNow(datasetId: string): Promise<RunDriftCheckResponse> {
+    const res = await apiClient.post<RunDriftCheckResponse>(`/drift/${datasetId}/check-now`);
     return res.data;
   },
 };

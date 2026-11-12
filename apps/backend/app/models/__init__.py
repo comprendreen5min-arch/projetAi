@@ -6,6 +6,7 @@ from app.models.dataset_version_tag import DatasetVersionTag
 from app.models.label_change import LabelChange
 from app.models.training_run import TrainingRun
 from app.models.active_learning import ActiveLearningRound
+from app.models.drift import DriftCheckRun
 
 __all__ = [
     "Base",
@@ -16,6 +17,7 @@ __all__ = [
     "LabelChange",
     "TrainingRun",
     "ActiveLearningRound",
+    "DriftCheckRun",
 ]
 
 
