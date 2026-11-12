@@ -842,3 +842,138 @@ export interface StartRunRequest {
 
 
 
+
+// -------------------------------------------------------------
+// Step 07: Active Learning Types
+// -------------------------------------------------------------
+
+export interface StrategyItem {
+  id: string; // "near_threshold" | "models_disagree" | "looks_wrong" | "weak_segments" | "random_control"
+  title: string;
+  subtitle: string;
+  rows: number;
+  percentage: number;
+  min_pct?: number;
+}
+
+export interface RoundSettings {
+  rows_this_round: number;
+  pool_source: string;
+  skip_checked_days: number;
+  one_row_per_customer: boolean;
+  label_maturity_days: number;
+  maturity_subtitle: string;
+  analyst_time: string;
+  expected_fixes: string;
+}
+
+export interface PickRowItem {
+  customer_id: string;
+  why_picked: string;
+  p_yes: number;
+  label: string;
+  strategy: string;
+  x?: number;
+  y?: number;
+}
+
+export interface PoolMapPoint {
+  id: string;
+  x: number;
+  y: number;
+  status: 'unchecked' | 'already checked' | 'picked now' | 'checked' | 'picked';
+  cluster?: string;
+}
+
+export interface RoundHistoryItem {
+  round_number: number;
+  status: 'done' | 'draft' | 'upcoming';
+  checked_count?: number;
+  fixed_count?: number;
+  hours?: number;
+  data_version: string;
+  model_name?: string;
+  recall_gain?: string;
+}
+
+export interface LoopStep {
+  step_number: number;
+  title: string;
+  info: string;
+  status: 'done' | 'active' | 'waiting';
+  detail: string;
+}
+
+export interface AutomationSettings {
+  start_on_new_crm: boolean;
+  start_on_drift: boolean;
+  requeue_not_yet: boolean;
+  retrain_after_round: boolean;
+  notify_reviewer: boolean;
+  auto_promote: boolean;
+}
+
+export interface ActiveLearningGuardrailItem {
+  id: string;
+  status: 'ok' | 'warning';
+  title: string;
+  description: string;
+}
+
+export interface ActiveLearningHeaderSummary {
+  dataset_id: string;
+  dataset_name: string;
+  round_number: number;
+  round_status: string;
+  scored_by_model: string;
+  target_column: string;
+  pool_size: number;
+  pool_breakdown: string;
+  budget_rows: number;
+  budget_subtitle: string;
+  hit_rate_round_1: number;
+  hit_rate_subtitle: string;
+  output_version: string;
+  output_subtitle: string;
+}
+
+export interface ActiveLearningStateResponse {
+  header: ActiveLearningHeaderSummary;
+  loop_steps: LoopStep[];
+  rounds_history: RoundHistoryItem[];
+  strategies: StrategyItem[];
+  round_settings: RoundSettings;
+  total_percentage: number;
+  total_rows: number;
+  picks: PickRowItem[];
+  pool_points: PoolMapPoint[];
+  weak_cluster_label: string;
+  hit_rate_picked: number;
+  hit_rate_random: number;
+  stop_rule_fixes_pct: number;
+  stop_rule_recall_gain_pts: number;
+  automation: AutomationSettings;
+  guardrails: ActiveLearningGuardrailItem[];
+}
+
+export interface UpdateRoundSettingsRequest {
+  rows_this_round?: number;
+  strategy_counts?: Record<string, number>;
+  round_settings?: Partial<RoundSettings>;
+  automation?: Partial<AutomationSettings>;
+  stop_rule?: { fixes_under_pct?: number; recall_gain_under_pts?: number };
+}
+
+export interface SendToLabelingRequest {
+  round_number?: number;
+  target_split?: string;
+  notes?: string;
+}
+
+export interface SendToLabelingResponse {
+  success: boolean;
+  message: string;
+  new_version_label: string;
+  rows_enqueued: number;
+  dataset_id: string;
+}

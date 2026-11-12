@@ -23,6 +23,11 @@ wheels/
 venv/
 ENV/
 virtualenv/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+.ipynb_checkpoints/
 
 # Environment variables & secrets
 .env
@@ -34,8 +39,27 @@ virtualenv/
 
 # Databases & local storage
 *.db
+*.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 *.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Machine Learning model weights and serialization
+*.pkl
+*.pickle
+*.joblib
+*.onnx
+*.pt
+*.pth
+*.bin
+*.weights
 
 # Pytest / Coverage
 .pytest_cache/
@@ -75,6 +99,8 @@ logs/
 *.swo
 *.sublime-workspace
 *.sublime-project
+*.code-workspace
+.history/
 
 # Operating System files
 # Windows
