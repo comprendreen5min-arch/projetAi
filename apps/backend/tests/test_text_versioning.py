@@ -93,7 +93,8 @@ def test_text_versioning_dynamic_dataset(client):
         data = res.json()
 
         assert "test_texte.txt" in data["display_title"]
-        assert len(data["lineage"]) >= 2
+        assert len(data["lineage"]) >= 1
+        assert data["current_version"]["id"] is not None
         assert data["compare"]["summary"]["removed"] is not None
         assert len(data["views"]) >= 5
     finally:

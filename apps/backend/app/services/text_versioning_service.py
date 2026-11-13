@@ -508,59 +508,68 @@ class TextVersioningService:
             ],
         }
 
+        current_v_id = f"v{v_count}"
+        v_list_label = " · ".join([f"v{i}" for i in range(1, v_count + 1)])
+
+        nodes = [
+            {
+                "id": "v1",
+                "version_hash": "v1_raw",
+                "rank": "V1 · RAW",
+                "badge": "BASELINE" if v_count == 1 else None,
+                "count_label": f"{v1_rows:,} documents",
+                "date_label": "Health 74 · 01 Nov",
+                "step_after": "CLEANING · 5 STEPS" if v_count > 1 else "CLEANING...",
+                "action_title": "REPLAY",
+                "action_desc": "Next month's batch → same masking, dedup and chunking → v2.1.",
+            }
+        ]
+        if v_count >= 2:
+            nodes.append({
+                "id": "v2",
+                "version_hash": "v2_clean",
+                "rank": "V2 · CLEAN",
+                "badge": "BASELINE" if v_count == 2 else "CLEAN",
+                "count_label": f"{v2_rows:,} documents",
+                "date_label": "Health 93 · 04 Nov",
+                "step_after": "AUGMENT · 4 TECHN." if v_count > 2 else "AUGMENTING...",
+                "action_title": "FROZEN GENERATION",
+                "action_desc": "LLM paraphrases are stored, not re-generated. Replaying v3 gives the exact same texts.",
+            })
+        if v_count >= 3:
+            nodes.append({
+                "id": current_v_id,
+                "version_hash": f"{current_v_id}_augmented",
+                "rank": f"V{v_count} · AUGMENTED",
+                "badge": "BASELINE",
+                "count_label": f"{v3_train:,} in train",
+                "date_label": f"+{v3_gen:,} generated · 07 Nov",
+                "step_after": "LABELING...",
+                "action_title": "RESTORE",
+                "action_desc": "Make an older version current. Nothing is deleted, history stays.",
+            })
+
         return {
             "dataset_id": str(dataset.id),
             "dataset_name": dataset.name,
             "display_title": dataset.name,
-            "breadcrumb": f"DATASET · {max(3, v_count)} VERSIONS · TEXT CLASSIFICATION · TEST SET LOCKED",
+            "breadcrumb": f"DATASET · {v_count} {'VERSION' if v_count == 1 else 'VERSIONS'} · TEXT CLASSIFICATION · TEST SET LOCKED",
             "kpis": {
-                "versions": str(max(3, v_count)),
+                "versions": str(v_count),
                 "versions_sub": v_list_label,
                 "stored": stored_mb,
                 "stored_sub": f"{logical_mb} logical · deltas only",
                 "languages": "4",
                 "languages_sub": "fr · ar · darija · en",
                 "used_by": "1 model" if v_count < 3 else "2 models",
-                "used_by_sub": "v2 and v3 protected",
+                "used_by_sub": "v2 and v3 protected" if v_count >= 3 else "v1 protected",
             },
             "current_version": {
-                "id": "v3",
+                "id": current_v_id,
                 "tag": "BASELINE",
-                "name": "v3",
+                "name": current_v_id,
             },
-            "lineage": [
-                {
-                    "id": "v1",
-                    "version_hash": "v1_raw",
-                    "rank": "V1 · RAW",
-                    "count_label": f"{v1_rows:,} documents",
-                    "date_label": "Health 74 · 01 Nov",
-                    "step_after": "CLEANING · 5 STEPS",
-                    "action_title": "REPLAY",
-                    "action_desc": "Next month's batch → same masking, dedup and chunking → v2.1.",
-                },
-                {
-                    "id": "v2",
-                    "version_hash": "v2_clean",
-                    "rank": "V2 · CLEAN",
-                    "count_label": f"{v2_rows:,} documents",
-                    "date_label": "Health 93 · 04 Nov",
-                    "step_after": "AUGMENT · 4 TECHN.",
-                    "action_title": "FROZEN GENERATION",
-                    "action_desc": "LLM paraphrases are stored, not re-generated. Replaying v3 gives the exact same texts.",
-                },
-                {
-                    "id": "v3",
-                    "version_hash": "v3_augmented",
-                    "rank": "V3 · AUGMENTED",
-                    "badge": "BASELINE",
-                    "count_label": f"{v3_train:,} in train",
-                    "date_label": f"+{v3_gen:,} generated · 07 Nov",
-                    "step_after": "LABELING...",
-                    "action_title": "RESTORE",
-                    "action_desc": "Make an older version current. Nothing is deleted, history stays.",
-                },
-            ],
+            "lineage": nodes,
             "version_details": {
                 "v1": {
                     "title": "v1 · raw",
