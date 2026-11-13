@@ -16,6 +16,7 @@ import { TextCleaningPage } from './pages/TextCleaningPage';
 import { TextAugmentationPage } from './pages/TextAugmentationPage';
 import { ImageProfilingPage } from './pages/ImageProfilingPage';
 import { ImageCleaningPage } from './pages/ImageCleaningPage';
+import { ImageAugmentationPage } from './pages/ImageAugmentationPage';
 import { ArrowRight, Download } from 'lucide-react';
 import { api } from './services/api';
 
@@ -156,6 +157,25 @@ const TopBar: React.FC<{ modality: 'tabular' | 'text' | 'image'; onModalityChang
             >
               <span>Continuer vers l'augmentation</span>
               <ArrowRight size={14} />
+            </button>
+          </>
+        ) : location.pathname === '/augmentation' && modality === 'image' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:export-image-augmentation-recipe'))}
+            >
+              Export recipe
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => navigate('/versioning')}
+            >
+              <span>Continue to versioning →</span>
             </button>
           </>
         ) : location.pathname === '/augmentation' && modality === 'text' ? (
@@ -424,11 +444,13 @@ export const App: React.FC = () => {
               <Route
                 path="/augmentation"
                 element={
+                  modality === 'image' ? <ImageAugmentationPage /> :
                   modality === 'text' ? <TextAugmentationPage /> :
                   <AugmentationPage />
                 }
               />
               <Route path="/text-augmentation" element={<TextAugmentationPage />} />
+              <Route path="/image-augmentation" element={<ImageAugmentationPage />} />
 
               {/* 04. Versioning (Functional Module) */}
               <Route path="/versioning" element={<VersioningPage />} />

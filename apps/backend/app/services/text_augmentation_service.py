@@ -626,7 +626,7 @@ class TextAugmentationService:
         target_balance = payload.get("target_balance", {})
         enabled_techniques = payload.get("techniques", ["paraphrase_llm", "back_translation", "darija_codeswitch", "typos_casing"])
 
-        v3_hash = f"v3_{int(time.time())}"
+        v3_hash = f"v3_{int(time.time() * 1000)}"
         target_path = storage_service.get_version_parquet_path(dataset.id, v3_hash)
 
         is_support_tickets = "ticket" in dataset.name.lower() or "support" in dataset.name.lower()

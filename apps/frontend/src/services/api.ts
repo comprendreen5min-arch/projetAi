@@ -47,6 +47,8 @@ import {
   ImageCleaningRecipeResponse,
   TextAugmentationRecipeResponse,
   TextAugmentationComparisonResponse,
+  ImageAugmentationRecipeResponse,
+  ImageAugmentationComparisonResponse,
 } from '../types';
 
 
@@ -627,6 +629,22 @@ export const api = {
 
   async saveTextAugmentationV3(datasetId: string, payload: any): Promise<TextAugmentationRecipeResponse> {
     const res = await apiClient.post<TextAugmentationRecipeResponse>(`/text-augmentation/${datasetId}/save-v3`, payload);
+    return res.data;
+  },
+
+  async getImageAugmentationRecipe(datasetId: string, versionHash?: string): Promise<ImageAugmentationRecipeResponse> {
+    const params = versionHash ? { version_hash: versionHash } : {};
+    const res = await apiClient.get<ImageAugmentationRecipeResponse>(`/image-augmentation/${datasetId}/recipe`, { params });
+    return res.data;
+  },
+
+  async compareImageAugmentation(datasetId: string, payload: any): Promise<ImageAugmentationComparisonResponse> {
+    const res = await apiClient.post<ImageAugmentationComparisonResponse>(`/image-augmentation/${datasetId}/compare`, payload);
+    return res.data;
+  },
+
+  async saveImageAugmentationV3(datasetId: string, payload: any): Promise<ImageAugmentationRecipeResponse> {
+    const res = await apiClient.post<ImageAugmentationRecipeResponse>(`/image-augmentation/${datasetId}/save-v3`, payload);
     return res.data;
   },
 };
