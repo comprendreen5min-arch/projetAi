@@ -49,6 +49,7 @@ import {
   TextAugmentationComparisonResponse,
   ImageAugmentationRecipeResponse,
   ImageAugmentationComparisonResponse,
+  TextVersioningDataResponse,
 } from '../types';
 
 
@@ -645,6 +646,21 @@ export const api = {
 
   async saveImageAugmentationV3(datasetId: string, payload: any): Promise<ImageAugmentationRecipeResponse> {
     const res = await apiClient.post<ImageAugmentationRecipeResponse>(`/image-augmentation/${datasetId}/save-v3`, payload);
+    return res.data;
+  },
+
+  async getTextVersioningData(datasetId: string): Promise<TextVersioningDataResponse> {
+    const res = await apiClient.get<TextVersioningDataResponse>(`/text-versioning/${datasetId}/data`);
+    return res.data;
+  },
+
+  async tagTextVersionProduction(datasetId: string, versionHash: string): Promise<any> {
+    const res = await apiClient.post(`/text-versioning/${datasetId}/tag-production`, { version_hash: versionHash });
+    return res.data;
+  },
+
+  async restoreTextVersion(datasetId: string, versionHash: string): Promise<any> {
+    const res = await apiClient.post(`/text-versioning/${datasetId}/restore`, { version_hash: versionHash });
     return res.data;
   },
 };

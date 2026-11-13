@@ -14,6 +14,7 @@ import { ExportApiPage } from './pages/ExportApiPage';
 import { TextProfilingPage } from './pages/TextProfilingPage';
 import { TextCleaningPage } from './pages/TextCleaningPage';
 import { TextAugmentationPage } from './pages/TextAugmentationPage';
+import { TextVersioningPage } from './pages/TextVersioningPage';
 import { ImageProfilingPage } from './pages/ImageProfilingPage';
 import { ImageCleaningPage } from './pages/ImageCleaningPage';
 import { ImageAugmentationPage } from './pages/ImageAugmentationPage';
@@ -215,6 +216,25 @@ const TopBar: React.FC<{ modality: 'tabular' | 'text' | 'image'; onModalityChang
             >
               <span>Continuer vers le versioning</span>
               <ArrowRight size={14} />
+            </button>
+          </>
+        ) : location.pathname === '/versioning' && modality === 'text' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:export-text-dataset-card'))}
+            >
+              Export dataset card
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => navigate('/labeling')}
+            >
+              <span>Continue to labeling →</span>
             </button>
           </>
         ) : location.pathname === '/versioning' ? (
@@ -453,7 +473,14 @@ export const App: React.FC = () => {
               <Route path="/image-augmentation" element={<ImageAugmentationPage />} />
 
               {/* 04. Versioning (Functional Module) */}
-              <Route path="/versioning" element={<VersioningPage />} />
+              <Route
+                path="/versioning"
+                element={
+                  modality === 'text' ? <TextVersioningPage /> :
+                  <VersioningPage />
+                }
+              />
+              <Route path="/text-versioning" element={<TextVersioningPage />} />
 
               {/* 05. Labeling */}
               <Route path="/labeling" element={<LabelingPage />} />
