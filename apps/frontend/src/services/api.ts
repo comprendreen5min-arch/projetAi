@@ -41,6 +41,7 @@ import {
   ExportApiStateResponse,
   UpdateExportSettingsRequest,
   DeployToStagingResponse,
+  TextProfileResponse,
 } from '../types';
 
 
@@ -541,6 +542,22 @@ export const api = {
     scope: string
   ): Promise<{ key: string; name: string; scope: string; status: string }> {
     const res = await apiClient.post(`/export-api/${datasetId}/api-keys`, { name, scope });
+    return res.data;
+  },
+
+  async getTextProfile(datasetId: string, versionHash?: string): Promise<TextProfileResponse> {
+    const params = versionHash ? { version_hash: versionHash } : {};
+    const res = await apiClient.get<TextProfileResponse>(`/text-profiling/${datasetId}/profile`, { params });
+    return res.data;
+  },
+
+  async uploadTextFile(file: File, datasetName?: string): Promise<TextProfileResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (datasetName) formData.append('dataset_name', datasetName);
+    const res = await apiClient.post<TextProfileResponse>('/text-profiling/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return res.data;
   },
 };

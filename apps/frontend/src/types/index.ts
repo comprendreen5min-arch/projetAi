@@ -1250,3 +1250,106 @@ export interface DeployToStagingResponse {
   endpoint_url: string;
   model_name: string;
 }
+
+// ─── Text NLP Profiling Types ───────────────────────────────────────────────
+export interface TextHealthBar {
+  label: string;
+  pct: number;
+  color: string;
+}
+
+export interface TextFindingItem {
+  rank: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW' | string;
+  title: string;
+  subtitle: string;
+  action_label: string;
+}
+
+export interface TextLanguageSlice {
+  name: string;
+  pct: number;
+  color: string;
+}
+
+export interface TextLabelBar {
+  label: string;
+  count_str: string;
+  pct: number;
+  color: string;
+}
+
+export interface TextDocumentQuote {
+  prefix: string;
+  marked: string;
+  suffix: string;
+  tag: string;
+  tag_color: string;
+  meta: string;
+  mark_style: string;
+}
+
+export interface TextHistogramItem {
+  label: string;
+  count: number;
+  pct: number;
+  height_pct: number;
+}
+
+export interface TextDuplicateGroup {
+  text?: string;
+  normalized?: string;
+  variants?: string[];
+  count: number;
+}
+
+export interface TextDuplicatesInfo {
+  exact_count: number;
+  exact_groups_count: number;
+  exact_groups: TextDuplicateGroup[];
+  near_count: number;
+  near_groups_count: number;
+  near_groups: TextDuplicateGroup[];
+  normalization_rule: string;
+}
+
+export interface TextProfileResponse {
+  dataset_id: string;
+  dataset_name: string;
+  version_hash: string;
+  breadcrumb: string;
+  original_filename: string;
+  kpis: {
+    documents: string;
+    languages: number;
+    labels: number | string;
+    size: string;
+    empty_lines_ignored?: number;
+  };
+  health: {
+    score: number;
+    bars: TextHealthBar[];
+  };
+  findings: TextFindingItem[];
+  languages: {
+    detected_count: number;
+    slices: TextLanguageSlice[];
+    mixed_text: string;
+  };
+  length: {
+    median: number;
+    max_label: string;
+    footnote_empty: string;
+    footnote_long: string;
+    histogram: number[];
+    histogram_details?: TextHistogramItem[];
+  };
+  labels: {
+    has_labels?: boolean;
+    classes_count: number;
+    message?: string;
+    bars: TextLabelBar[];
+  };
+  duplicates?: TextDuplicatesInfo;
+  quotes: TextDocumentQuote[];
+}
