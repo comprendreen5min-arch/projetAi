@@ -3,7 +3,7 @@ from app.api.v1.endpoints import (
     datasets, versions, transformations, cleaning, augmentation,
     labeling, training, active_learning, drift, export_api,
     text_profiling, text_cleaning, text_augmentation, text_versioning, image_profiling, image_cleaning,
-    image_augmentation
+    image_augmentation, image_versioning
 )
 
 api_router = APIRouter()
@@ -25,6 +25,7 @@ api_router.include_router(text_versioning.router, prefix="/text-versioning", tag
 api_router.include_router(image_profiling.router, prefix="/image-profiling", tags=["Image Profiling"])
 api_router.include_router(image_cleaning.router, prefix="/image-cleaning", tags=["Image Cleaning"])
 api_router.include_router(image_augmentation.router, prefix="/image-augmentation", tags=["Image Augmentation"])
+api_router.include_router(image_versioning.router, prefix="/image-versioning", tags=["Image Versioning"])
 
 
 

@@ -50,6 +50,7 @@ import {
   ImageAugmentationRecipeResponse,
   ImageAugmentationComparisonResponse,
   TextVersioningDataResponse,
+  ImageVersioningDataResponse,
 } from '../types';
 
 
@@ -661,6 +662,21 @@ export const api = {
 
   async restoreTextVersion(datasetId: string, versionHash: string): Promise<any> {
     const res = await apiClient.post(`/text-versioning/${datasetId}/restore`, { version_hash: versionHash });
+    return res.data;
+  },
+
+  async getImageVersioningData(datasetId: string): Promise<ImageVersioningDataResponse> {
+    const res = await apiClient.get<ImageVersioningDataResponse>(`/image-versioning/${datasetId}/data`);
+    return res.data;
+  },
+
+  async tagImageVersionProduction(datasetId: string, versionHash: string): Promise<any> {
+    const res = await apiClient.post(`/image-versioning/${datasetId}/tag-production`, { version_hash: versionHash });
+    return res.data;
+  },
+
+  async restoreImageVersion(datasetId: string, versionHash: string): Promise<any> {
+    const res = await apiClient.post(`/image-versioning/${datasetId}/restore`, { version_hash: versionHash });
     return res.data;
   },
 };

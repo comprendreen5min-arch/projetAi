@@ -1928,3 +1928,132 @@ export interface TextVersioningDataResponse {
     card_summary: string;
   };
 }
+
+// ==========================================
+// Image Versioning Types (04 Versioning - Images)
+// ==========================================
+
+export interface ImageVersioningLineageNode {
+  id: string;
+  version_hash: string;
+  rank: string;
+  badge?: string;
+  count_label: string;
+  date_label: string;
+  step_after?: string;
+  action_title: string;
+  action_desc: string;
+}
+
+export interface ImageVersioningDetail {
+  title: string;
+  badge?: string;
+  parent: string;
+  recipe: string;
+  seed: string;
+  image_size: string;
+  splits: string;
+  created_by: string;
+  pull_command: string;
+  formats: string;
+}
+
+export interface ImageVersioningDiffItem {
+  id: string;
+  type: 'EDITED' | 'REMOVED' | 'BOXES_CHANGED';
+  badge: string;
+  badge_color?: 'amber' | 'coral' | 'blue';
+  sub: string;
+  before_img: string;
+  after_img?: string;
+  status: 'EDITED' | 'REMOVED';
+  before_label?: string;
+  after_label?: string;
+  box_note?: string;
+}
+
+export interface ImageVersioningView {
+  id: string;
+  label: string;
+  count?: string;
+  active?: boolean;
+}
+
+export interface ImageVersioningModel {
+  model_run: string;
+  data: string;
+  metric_title: string;
+  metric_val: string;
+  tag: string;
+  tag_type: 'production' | 'archived';
+}
+
+export interface ImageVersioningGuardrail {
+  title: string;
+  subtitle: string;
+  checked: boolean;
+}
+
+export interface ImageVersioningDataResponse {
+  dataset_id: string;
+  dataset_name: string;
+  display_title: string;
+  breadcrumb: string;
+  kpis: {
+    versions: string;
+    versions_sub: string;
+    stored: string;
+    stored_sub: string;
+    boxes: string;
+    boxes_sub: string;
+    used_by: string;
+    used_by_sub: string;
+  };
+  current_version: {
+    id: string;
+    tag: string;
+    name: string;
+  };
+  lineage: ImageVersioningLineageNode[];
+  version_details: Record<string, ImageVersioningDetail>;
+  compare: {
+    from_options: string[];
+    to_options: string[];
+    selected_from: string;
+    selected_to: string;
+    summary: {
+      removed: string;
+      removed_sub: string;
+      edited: string;
+      edited_sub: string;
+      boxes: string;
+      boxes_sub: string;
+      classes: string;
+      classes_sub: string;
+    };
+    images_per_class: {
+      name: string;
+      v1_count: number;
+      v2_count: number;
+    }[];
+    image_shape: {
+      metric: string;
+      v1: string;
+      v2: string;
+    }[];
+    diffs: ImageVersioningDiffItem[];
+    v1_v2?: any;
+    v2_v3?: any;
+  };
+  views: ImageVersioningView[];
+  views_api_note?: string;
+  used_by: ImageVersioningModel[];
+  guardrails: ImageVersioningGuardrail[];
+  action_banner: {
+    version: string;
+    recipes: string;
+    splits: string;
+    baseline: string;
+    card_summary: string;
+  };
+}

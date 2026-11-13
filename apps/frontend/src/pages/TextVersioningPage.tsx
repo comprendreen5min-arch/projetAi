@@ -94,7 +94,7 @@ export const TextVersioningPage: React.FC = () => {
     try {
       const res = await api.getTextVersioningData(datasetId);
       setData(res);
-      setActiveVersionId(res.current_version.id || 'v3');
+      setActiveVersionId(res.current_version.id || res.current_version.name || 'v1');
       setCompareFrom(res.compare.selected_from || 'v1 · raw');
       setCompareTo(res.compare.selected_to || 'v2 · clean');
       setActiveViewId(res.views[0]?.id || 'all');
@@ -438,7 +438,7 @@ export const TextVersioningPage: React.FC = () => {
               marginBottom: '0.35rem',
             }}
           >
-            {data?.current_version.tag || 'BASELINE'}
+            {activeDetails?.badge || (activeVersionId === (data?.current_version.id || data?.current_version.name) ? data?.current_version.tag : 'ACTIVE') || 'BASELINE'}
           </div>
           <div
             style={{
@@ -450,10 +450,10 @@ export const TextVersioningPage: React.FC = () => {
               margin: '0.2rem 0',
             }}
           >
-            {data?.current_version.name || 'v3'}
+            {activeVersionId || data?.current_version.name || 'v1'}
           </div>
           <div style={{ fontSize: '0.65rem', color: C.textMuted, fontFamily: 'monospace', letterSpacing: '0.1em' }}>
-            CURRENT VERSION
+            {activeVersionId === (data?.current_version.id || data?.current_version.name) ? 'CURRENT VERSION' : 'SELECTED VERSION'}
           </div>
         </div>
       </div>
