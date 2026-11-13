@@ -15,10 +15,16 @@ import { TextProfilingPage } from './pages/TextProfilingPage';
 import { TextCleaningPage } from './pages/TextCleaningPage';
 import { TextAugmentationPage } from './pages/TextAugmentationPage';
 import { TextVersioningPage } from './pages/TextVersioningPage';
+import { TextLabelingPage } from './pages/TextLabelingPage';
+import { TextTrainingPage } from './pages/TextTrainingPage';
+import { TextActiveLearningPage } from './pages/TextActiveLearningPage';
 import { ImageProfilingPage } from './pages/ImageProfilingPage';
 import { ImageCleaningPage } from './pages/ImageCleaningPage';
 import { ImageAugmentationPage } from './pages/ImageAugmentationPage';
 import { ImageVersioningPage } from './pages/ImageVersioningPage';
+import { ImageLabelingPage } from './pages/ImageLabelingPage';
+import { ImageTrainingPage } from './pages/ImageTrainingPage';
+import { ImageActiveLearningPage } from './pages/ImageActiveLearningPage';
 import { ArrowRight, Download } from 'lucide-react';
 import { api } from './services/api';
 
@@ -278,65 +284,175 @@ const TopBar: React.FC<{ modality: 'tabular' | 'text' | 'image'; onModalityChang
             </button>
           </>
         ) : location.pathname === '/labeling' ? (
-          <>
-            <button
-              type="button"
-              className="btn btn-secondary font-mono"
-              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
-              onClick={() => window.dispatchEvent(new CustomEvent('datalift:target-definition'))}
-            >
-              Définition de la cible
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary font-mono"
-              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
-              onClick={() => navigate('/training')}
-            >
-              <span>Continuer vers le training</span>
-              <ArrowRight size={14} />
-            </button>
-          </>
+          modality === 'image' ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:labeling-guidelines'))}
+              >
+                Labeling guidelines
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{
+                  fontSize: '0.78rem',
+                  padding: '0.45rem 1rem',
+                  backgroundColor: '#f59e0b',
+                  color: '#000',
+                  fontWeight: 600,
+                  border: 'none',
+                }}
+                onClick={() => navigate('/training')}
+              >
+                <span>Continue to training →</span>
+              </button>
+            </>
+          ) : modality === 'text' ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:label-definitions'))}
+              >
+                Label definitions
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{
+                  fontSize: '0.78rem',
+                  padding: '0.45rem 1rem',
+                  backgroundColor: '#f59e0b',
+                  color: '#000',
+                  fontWeight: 600,
+                  border: 'none',
+                }}
+                onClick={() => navigate('/training')}
+              >
+                <span>Continue to training →</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:target-definition'))}
+              >
+                Définition de la cible
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+                onClick={() => navigate('/training')}
+              >
+                <span>Continuer vers le training</span>
+                <ArrowRight size={14} />
+              </button>
+            </>
+          )
         ) : location.pathname === '/training' ? (
-          <>
-            <button
-              type="button"
-              className="btn btn-secondary font-mono"
-              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
-              onClick={() => window.dispatchEvent(new CustomEvent('datalift:compare-runs'))}
-            >
-              Comparer les runs
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary font-mono"
-              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
-              onClick={() => navigate('/active-learning')}
-            >
-              <span>Continuer vers l'apprentissage actif</span>
-              <ArrowRight size={14} />
-            </button>
-          </>
+          modality === 'image' || modality === 'text' ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:compare-runs'))}
+              >
+                Compare runs
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{
+                  fontSize: '0.78rem',
+                  padding: '0.45rem 1rem',
+                  backgroundColor: '#f59e0b',
+                  color: '#000',
+                  fontWeight: 600,
+                  border: 'none',
+                }}
+                onClick={() => navigate('/active-learning')}
+              >
+                <span>Continue to active learning →</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:compare-runs'))}
+              >
+                Comparer les runs
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+                onClick={() => navigate('/active-learning')}
+              >
+                <span>Continuer vers l'apprentissage actif</span>
+                <ArrowRight size={14} />
+              </button>
+            </>
+          )
         ) : location.pathname === '/active-learning' ? (
-          <>
-            <button
-              type="button"
-              className="btn btn-secondary font-mono"
-              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
-              onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-round-history'))}
-            >
-              Historique des cycles
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary font-mono"
-              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
-              onClick={() => navigate('/drift')}
-            >
-              <span>Continuer vers la dérive</span>
-              <ArrowRight size={14} />
-            </button>
-          </>
+          modality === 'text' || modality === 'image' ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-round-history'))}
+              >
+                Round history
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{
+                  fontSize: '0.78rem',
+                  padding: '0.45rem 1rem',
+                  backgroundColor: '#f59e0b',
+                  color: '#000',
+                  fontWeight: 600,
+                  border: 'none',
+                }}
+                onClick={() => navigate('/drift')}
+              >
+                <span>Continue to drift →</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-round-history'))}
+              >
+                Historique des cycles
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+                onClick={() => navigate('/drift')}
+              >
+                <span>Continuer vers la dérive</span>
+                <ArrowRight size={14} />
+              </button>
+            </>
+          )
         ) : location.pathname === '/drift' ? (
           <>
             <button
@@ -505,13 +621,39 @@ export const App: React.FC = () => {
               <Route path="/image-versioning" element={<ImageVersioningPage />} />
 
               {/* 05. Labeling */}
-              <Route path="/labeling" element={<LabelingPage />} />
+              <Route
+                path="/labeling"
+                element={
+                  modality === 'image' ? <ImageLabelingPage /> :
+                  modality === 'text' ? <TextLabelingPage /> :
+                  <LabelingPage />
+                }
+              />
+              <Route path="/text-labeling" element={<TextLabelingPage />} />
+              <Route path="/image-labeling" element={<ImageLabelingPage />} />
 
               {/* 06. Training */}
-              <Route path="/training" element={<TrainingPage />} />
+              <Route
+                path="/training"
+                element={
+                  modality === 'image' ? <ImageTrainingPage /> :
+                  modality === 'text' ? <TextTrainingPage /> :
+                  <TrainingPage />
+                }
+              />
+              <Route path="/text-training" element={<TextTrainingPage />} />
+              <Route path="/image-training" element={<ImageTrainingPage />} />
 
               {/* 07. Active learning */}
-              <Route path="/active-learning" element={<ActiveLearningPage />} />
+              <Route
+                path="/active-learning"
+                element={
+                  modality === 'image' ? <ImageActiveLearningPage /> :
+                  modality === 'text' ? <TextActiveLearningPage /> : <ActiveLearningPage />
+                }
+              />
+              <Route path="/text-active-learning" element={<TextActiveLearningPage />} />
+              <Route path="/image-active-learning" element={<ImageActiveLearningPage />} />
 
               {/* 08. Drift */}
               <Route path="/drift" element={<DriftPage />} />

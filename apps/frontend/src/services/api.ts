@@ -51,6 +51,12 @@ import {
   ImageAugmentationComparisonResponse,
   TextVersioningDataResponse,
   ImageVersioningDataResponse,
+  TextLabelingDataResponse,
+  TextTrainingDataResponse,
+  TextActiveLearningDataResponse,
+  ImageLabelingDataResponse,
+  ImageTrainingDataResponse,
+  ImageActiveLearningDataResponse,
 } from '../types';
 
 
@@ -677,6 +683,124 @@ export const api = {
 
   async restoreImageVersion(datasetId: string, versionHash: string): Promise<any> {
     const res = await apiClient.post(`/image-versioning/${datasetId}/restore`, { version_hash: versionHash });
+    return res.data;
+  },
+
+  async getTextLabelingData(datasetId: string, queue: string = 'unlabeled', index: number = 0): Promise<TextLabelingDataResponse> {
+    const res = await apiClient.get<TextLabelingDataResponse>(`/text-labeling/${datasetId}/data`, { params: { queue, index } });
+    return res.data;
+  },
+
+  async submitTextLabelDecision(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-labeling/${datasetId}/decision`, payload);
+    return res.data;
+  },
+
+  async saveTextLabelV4(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-labeling/${datasetId}/save-v4`, payload);
+    return res.data;
+  },
+
+  async getTextTrainingData(
+    datasetId: string,
+    runFilter: string = 'all',
+    selectedRunId?: string
+  ): Promise<TextTrainingDataResponse> {
+    const res = await apiClient.get<TextTrainingDataResponse>(`/text-training/${datasetId}/data`, {
+      params: { run_filter: runFilter, selected_run_id: selectedRunId },
+    });
+    return res.data;
+  },
+
+  async startTextTrainingRun(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-training/${datasetId}/start-run`, payload);
+    return res.data;
+  },
+
+  async promoteTextCandidate(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-training/${datasetId}/promote`, payload);
+    return res.data;
+  },
+
+  async getTextActiveLearningData(
+    datasetId: string,
+    strategyFilter: string = 'all'
+  ): Promise<TextActiveLearningDataResponse> {
+    const res = await apiClient.get<TextActiveLearningDataResponse>(`/text-active-learning/${datasetId}/data`, {
+      params: { strategy_filter: strategyFilter },
+    });
+    return res.data;
+  },
+
+  async saveTextActiveLearningDraft(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-active-learning/${datasetId}/save-draft`, payload);
+    return res.data;
+  },
+
+  async sendTextActiveLearningToLabeling(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-active-learning/${datasetId}/send-to-labeling`, payload);
+    return res.data;
+  },
+
+  async getImageLabelingData(
+    datasetId: string,
+    queue: string = 'unlabeled',
+    imageIndex: number = 2
+  ): Promise<ImageLabelingDataResponse> {
+    const res = await apiClient.get<ImageLabelingDataResponse>(`/image-labeling/${datasetId}/data`, {
+      params: { queue, image_index: imageIndex },
+    });
+    return res.data;
+  },
+
+  async submitImageLabelDecision(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-labeling/${datasetId}/decision`, payload);
+    return res.data;
+  },
+
+  async saveImageLabelV4(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-labeling/${datasetId}/save-v4`, payload);
+    return res.data;
+  },
+
+  async getImageTrainingData(
+    datasetId: string,
+    runFilter: string = 'all',
+    selectedRunId?: string
+  ): Promise<ImageTrainingDataResponse> {
+    const res = await apiClient.get<ImageTrainingDataResponse>(`/image-training/${datasetId}/data`, {
+      params: { run_filter: runFilter, selected_run_id: selectedRunId },
+    });
+    return res.data;
+  },
+
+  async startImageTrainingRun(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-training/${datasetId}/start-run`, payload);
+    return res.data;
+  },
+
+  async startImageShadowMode(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-training/${datasetId}/shadow-mode`, payload);
+    return res.data;
+  },
+
+  async getImageActiveLearningData(
+    datasetId: string,
+    strategyFilter: string = 'all'
+  ): Promise<ImageActiveLearningDataResponse> {
+    const res = await apiClient.get<ImageActiveLearningDataResponse>(`/image-active-learning/${datasetId}/data`, {
+      params: { strategy_filter: strategyFilter },
+    });
+    return res.data;
+  },
+
+  async saveImageActiveLearningDraft(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-active-learning/${datasetId}/save-draft`, payload);
+    return res.data;
+  },
+
+  async sendImageActiveLearningToLabeling(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-active-learning/${datasetId}/send-to-labeling`, payload);
     return res.data;
   },
 };
