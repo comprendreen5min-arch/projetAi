@@ -1809,3 +1809,122 @@ export interface ImageAugmentationComparisonResponse {
   details?: Record<string, { without: number; with: number }>;
   message?: string;
 }
+
+export interface TextVersioningLineageNode {
+  id: string;
+  version_hash: string;
+  rank: string;
+  badge?: string;
+  count_label: string;
+  date_label: string;
+  step_after?: string;
+  action_title?: string;
+  action_desc?: string;
+}
+
+export interface TextVersioningDetail {
+  title: string;
+  badge?: string;
+  parent: string;
+  recipe: string;
+  llm_used: string;
+  seed: string;
+  splits: string;
+  created_by: string;
+  pull_command: string;
+  formats: string;
+}
+
+export interface TextVersioningDiffItem {
+  id: string;
+  lang: string;
+  type: 'EDITED' | 'REMOVED' | 'SPLIT';
+  reason: string;
+  before_highlight?: string;
+  after_highlight?: string;
+  prefix?: string;
+  suffix?: string;
+  full_text?: string;
+}
+
+export interface TextVersioningView {
+  id: string;
+  label: string;
+  count?: string;
+  active?: boolean;
+}
+
+export interface TextVersioningModel {
+  model_run: string;
+  data: string;
+  macro_f1: string;
+  tag: string;
+  tag_type: 'production' | 'archived';
+}
+
+export interface TextVersioningGuardrail {
+  title: string;
+  subtitle: string;
+  checked: boolean;
+}
+
+export interface TextVersioningDataResponse {
+  dataset_id: string;
+  dataset_name: string;
+  display_title: string;
+  breadcrumb: string;
+  kpis: {
+    versions: string;
+    versions_sub: string;
+    stored: string;
+    stored_sub: string;
+    languages: string;
+    languages_sub: string;
+    used_by: string;
+    used_by_sub: string;
+  };
+  current_version: {
+    id: string;
+    tag: string;
+    name: string;
+  };
+  lineage: TextVersioningLineageNode[];
+  version_details: Record<string, TextVersioningDetail>;
+  compare: {
+    from_options: string[];
+    to_options: string[];
+    selected_from: string;
+    selected_to: string;
+    summary: {
+      removed: string;
+      removed_sub: string;
+      edited: string;
+      edited_sub: string;
+      labels_changed: string;
+      labels_changed_sub: string;
+      personal_data: string;
+      personal_data_sub: string;
+    };
+    label_distribution: {
+      name: string;
+      v1_pct: number;
+      v2_pct: number;
+    }[];
+    text_shape: {
+      metric: string;
+      v1: string;
+      v2: string;
+    }[];
+    diffs: TextVersioningDiffItem[];
+  };
+  views: TextVersioningView[];
+  used_by: TextVersioningModel[];
+  guardrails: TextVersioningGuardrail[];
+  action_banner: {
+    version: string;
+    recipes: string;
+    splits: string;
+    baseline: string;
+    card_summary: string;
+  };
+}
