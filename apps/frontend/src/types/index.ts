@@ -2057,3 +2057,963 @@ export interface ImageVersioningDataResponse {
     card_summary: string;
   };
 }
+
+// ==========================================
+// Text Labeling Types (05 Labeling - Text)
+// ==========================================
+
+export interface TextLabelingQueueItem {
+  id: string;
+  title: string;
+  count: string;
+  desc: string;
+  footer_done: string;
+  progress_pct: number;
+  btn_label: string;
+  active: boolean;
+}
+
+export interface TextLabelingToken {
+  text: string;
+  highlight: boolean;
+}
+
+export interface TextLabelingOption {
+  id: number;
+  name: string;
+  confidence?: number;
+  selected?: boolean;
+}
+
+export interface TextLabelingSuggestion {
+  label: string;
+  confidence: number;
+}
+
+export interface TextLabelingSimilar {
+  text: string;
+  label: string;
+}
+
+export interface TextLabelingWorkspace {
+  ticket_counter: string;
+  ticket_id: string;
+  language: string;
+  meta: string;
+  text_raw: string;
+  tokens: TextLabelingToken[];
+  meaning_en: string;
+  meaning_sub: string;
+  labels: TextLabelingOption[];
+  model_suggestions: TextLabelingSuggestion[];
+  similar_tickets: TextLabelingSimilar[];
+  definition_title: string;
+  definition_text: string;
+  this_ticket_meta: {
+    why_in_queue: string;
+    split: string;
+    paraphrases: string;
+  };
+}
+
+export interface TextLabelingCheck {
+  id: string;
+  title: string;
+  desc: string;
+  count: number;
+}
+
+export interface TextLabelingTeamMember {
+  name: string;
+  tickets_per_h: number;
+  accepts_ai: string;
+  agreement: string;
+}
+
+export interface TextLabelingGuardrail {
+  title: string;
+  subtitle: string;
+  checked: boolean;
+  is_warning?: boolean;
+}
+
+export interface TextLabelingDataResponse {
+  dataset_id: string;
+  dataset_name: string;
+  display_title: string;
+  breadcrumb: string;
+  kpis: {
+    to_label: string;
+    to_label_sub: string;
+    suspected_errors: string;
+    suspected_errors_sub: string;
+    done_today: string;
+    done_today_sub: string;
+    output: string;
+    output_sub: string;
+  };
+  gauge: {
+    coverage_before: number;
+    coverage_after: number;
+  };
+  queues: TextLabelingQueueItem[];
+  queue_config: {
+    task: string;
+    pre_labeling: string;
+    language: string;
+    double_annotation: string;
+  };
+  workspace: TextLabelingWorkspace;
+  label_checks: TextLabelingCheck[];
+  team: TextLabelingTeamMember[];
+  guardrails: TextLabelingGuardrail[];
+  action_banner: {
+    summary: string;
+    detail: string;
+    target_version: string;
+  };
+}
+
+
+// ==========================================
+// Text Training Types (06 Training - Text)
+// ==========================================
+
+export interface TextTrainingModelOption {
+  id: string;
+  name: string;
+  checked: boolean;
+}
+
+export interface TextTrainingCheck {
+  title: string;
+  subtitle: string;
+  checked: boolean;
+  is_warning?: boolean;
+}
+
+export interface TextTrainingRun {
+  id: string;
+  data: string;
+  model: string;
+  status: string;
+  is_running: boolean;
+  macro_f1: string;
+  time: string;
+  tag: string;
+  tag_style: string;
+}
+
+export interface TextTrainingActiveRun {
+  id: string;
+  status_badge: string;
+  epoch_status: string;
+  loss_curve: {
+    epochs: string[];
+    train_loss: number[];
+    val_loss: number[];
+    val_f1: string;
+  };
+  logs: string[];
+}
+
+export interface TextTrainingPerLabel {
+  label: string;
+  tickets: string;
+  precision: string;
+  recall: string;
+  f1: string;
+}
+
+export interface TextTrainingPerLanguage {
+  language: string;
+  tickets: string;
+  macro_f1: string;
+  vs_v3: string;
+}
+
+export interface TextTrainingErrorItem {
+  ticket_id: string;
+  language: string;
+  tokens: { text: string; highlight: boolean }[];
+  label_pred: string;
+  actions: string[];
+}
+
+export interface TextTrainingComparisonRow {
+  metric: string;
+  prod_val: string;
+  cand_val: string;
+  change: string;
+  change_type: 'positive' | 'neutral' | 'negative';
+}
+
+export interface TextTrainingChecklist {
+  title: string;
+  checked: boolean;
+}
+
+export interface TextTrainingGuardrail {
+  title: string;
+  subtitle: string;
+  checked: boolean;
+  is_warning?: boolean;
+}
+
+export interface TextTrainingDataResponse {
+  dataset_id: string;
+  dataset_name: string;
+  display_title: string;
+  breadcrumb: string;
+  candidate_version: string;
+  candidate_badge: string;
+  kpis: {
+    runs: string;
+    runs_sub: string;
+    data_version: string;
+    data_sub: string;
+    compute: string;
+    compute_sub: string;
+    in_production: string;
+    in_production_sub: string;
+  };
+  new_run_config: {
+    dataset_version: string;
+    train_view: string;
+    train_view_detail: string;
+    languages: string;
+    models_to_try: TextTrainingModelOption[];
+    task: string;
+    optimize: string;
+    rare_labels: string;
+    rare_labels_detail: string;
+    fine_tuning: {
+      max_length: string;
+      learning_rate: string;
+      epochs: number;
+      batch: number;
+      detail: string;
+    };
+    compute_reproducibility: {
+      worker: string;
+      precision: string;
+      code: string;
+      estimate: string;
+    };
+    checks_before_start: TextTrainingCheck[];
+    command: string;
+  };
+  runs_section: {
+    counts: { all: number; running: number; done: number };
+    runs: TextTrainingRun[];
+    active_run: TextTrainingActiveRun;
+  };
+  evaluate: {
+    selected_run: string;
+    selected_split: string;
+    summary_kpis: {
+      macro_f1: string;
+      macro_f1_sub: string;
+      accuracy: string;
+      accuracy_sub: string;
+      worst_label: string;
+      worst_label_sub: string;
+      worst_language: string;
+      worst_language_sub: string;
+      test_set: string;
+      test_set_sub: string;
+    };
+    per_label: TextTrainingPerLabel[];
+    confusion_matrix: {
+      labels: string[];
+      matrix: number[][];
+      buttons: { label: string; filter: string }[];
+    };
+    per_language: TextTrainingPerLanguage[];
+    human_routing: {
+      threshold: number;
+      handled_auto: string;
+      accuracy_on_those: string;
+    };
+    errors_to_look_at: TextTrainingErrorItem[];
+  };
+  compare_and_promote: {
+    comparison_table: TextTrainingComparisonRow[];
+    before_production: TextTrainingChecklist[];
+    replay_command: string;
+  };
+  guardrails: TextTrainingGuardrail[];
+  action_banner: {
+    summary: string;
+    detail: string;
+    primary_action: string;
+    secondary_action: string;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Text Active Learning (07 Active Learning) Types
+// ---------------------------------------------------------------------------
+
+export interface TextActiveLearningKPIs {
+  pool: string;
+  pool_sub: string;
+  budget: string;
+  budget_sub: string;
+  new_topics: string;
+  new_topics_sub: string;
+  output: string;
+  output_sub: string;
+}
+
+export interface TextActiveLearningStage {
+  step: string;
+  name: string;
+  metric: string;
+  status: string;
+  is_done: boolean;
+  is_active: boolean;
+}
+
+export interface TextActiveLearningRoundHistory {
+  round: string;
+  detail: string;
+  target: string;
+  is_active: boolean;
+}
+
+export interface TextActiveLearningStrategy {
+  id: string;
+  name: string;
+  tag?: string;
+  desc: string;
+  share_pct: number;
+  tickets: number;
+}
+
+export interface TextActiveLearningLanguageQuota {
+  lang: string;
+  min_pct: string;
+}
+
+export interface TextActiveLearningRoundSettings {
+  tickets_this_round: number;
+  language_quotas: TextActiveLearningLanguageQuota[];
+  skip_near_duplicates: boolean;
+  queue_whole_ticket: boolean;
+  pre_label_with_model: boolean;
+  pre_label_model_name: string;
+  annotator_time: string;
+  darija_reviewer: string;
+}
+
+export interface TextActiveLearningPick {
+  ticket_id: string;
+  language: string;
+  text: string;
+  why_picked: string;
+  strategy_key: string;
+  model_top_2: string;
+}
+
+export interface TextActiveLearningClusterCallout {
+  cluster_id: number;
+  tickets_count: number;
+  title: string;
+  frequent_words: string;
+  footnote: string;
+}
+
+export interface TextActiveLearningChartBar {
+  label: string;
+  sub: string;
+  type: 'solid' | 'dashed' | 'dash';
+  height_pct: number;
+}
+
+export interface TextActiveLearningTableRow {
+  round: string;
+  checked: string;
+  fixed: string;
+  hours: string;
+  data: string;
+  model: string;
+  recall_delta: string;
+}
+
+export interface TextActiveLearningIsItWorthIt {
+  header_sub?: string;
+  chart?: {
+    title: string;
+    sub: string;
+    bars: TextActiveLearningChartBar[];
+    footer: string;
+  };
+  table?: {
+    headers: string[];
+    rows: TextActiveLearningTableRow[];
+  };
+  stop_rule?: {
+    title: string;
+    left_label: string;
+    left_val: string;
+    right_label: string;
+    right_val: string;
+    footer: string;
+  };
+  learning_curve?: TextActiveLearningLearningCurve;
+  rounds_table?: TextActiveLearningRoundsTableRow[];
+}
+
+export interface TextActiveLearningLearningCurve {
+  macro_f1: string;
+  rounds: string[];
+  active_learning_curve: number[];
+  random_control_curve: number[];
+}
+
+export interface TextActiveLearningRoundsTableRow {
+  round: string;
+  tickets: string;
+  strategy: string;
+  hours: string;
+  data: string;
+  model: string;
+  gain: string;
+}
+
+export interface TextActiveLearningAutomationRule {
+  id: string;
+  title: string;
+  sub: string;
+  enabled: boolean;
+  disabled?: boolean;
+}
+
+export interface TextActiveLearningGuardrail {
+  title: string;
+  subtitle: string;
+  checked: boolean;
+  is_warning?: boolean;
+}
+
+export interface TextActiveLearningDataResponse {
+  dataset_id: string;
+  dataset_name: string;
+  display_title: string;
+  breadcrumb: string;
+  round_badge: string;
+  round_status: string;
+  round_subtitle: string;
+  kpis: TextActiveLearningKPIs;
+  explainer: {
+    title: string;
+    content: string;
+  };
+  loop_section: {
+    stages: TextActiveLearningStage[];
+    rounds_history: TextActiveLearningRoundHistory[];
+  };
+  what_to_pick: {
+    strategies: TextActiveLearningStrategy[];
+    total_tickets: number;
+    total_pct: number;
+    round_settings: TextActiveLearningRoundSettings;
+  };
+  picks_section: {
+    filter_counts: {
+      all: number;
+      margin: number;
+      diversity: number;
+      rare: number;
+      new_topic: number;
+      disagree: number;
+      random: number;
+    };
+    cluster_callout: TextActiveLearningClusterCallout;
+    picks: TextActiveLearningPick[];
+  };
+  is_it_worth_it: TextActiveLearningIsItWorthIt;
+  automation: TextActiveLearningAutomationRule[];
+  guardrails: TextActiveLearningGuardrail[];
+  action_banner: {
+    summary: string;
+    detail: string;
+    save_draft_label: string;
+    send_labeling_label: string;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Image Labeling (05 Labeling) Types
+// ---------------------------------------------------------------------------
+
+export interface ImageLabelingKPIs {
+  to_label: string;
+  to_label_sub: string;
+  suspected_errors: string;
+  suspected_errors_sub: string;
+  done_today: string;
+  done_today_sub: string;
+  output: string;
+  output_sub: string;
+}
+
+export interface ImageLabelingGauge {
+  coverage_before: number;
+  coverage_after: number;
+  label: string;
+}
+
+export interface ImageLabelingQueue {
+  id: string;
+  title: string;
+  count: string;
+  desc: string;
+  progress_text: string;
+  progress_pct: number;
+  action_label: string;
+  active: boolean;
+}
+
+export interface ImageLabelingQueueSettings {
+  pre_annotation: string;
+  order_inside_queue: string;
+  double_annotation: string;
+  assign: string;
+}
+
+export interface ImageLabelingBoundingBox {
+  id: string;
+  label: string;
+  tag: string;
+  type: 'human' | 'model' | 'drawing';
+  confidence?: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  selected?: boolean;
+}
+
+export interface ImageLabelingModelSuggestion {
+  label: string;
+  confidence: number;
+}
+
+export interface ImageLabelingClass {
+  id: number;
+  name: string;
+  count: string;
+  shortcut: string;
+  is_rare: boolean;
+}
+
+export interface ImageLabelingFilmstripItem {
+  id: string;
+  index: number;
+  status: 'labeled' | 'current' | 'unlabeled';
+  thumb: string;
+}
+
+export interface ImageLabelingWorkspace {
+  queue_name: string;
+  image_name: string;
+  image_position: string;
+  image_url: string;
+  filmstrip: ImageLabelingFilmstripItem[];
+  active_filmstrip_index: number;
+  boxes: ImageLabelingBoundingBox[];
+  model_suggestions: ImageLabelingModelSuggestion[];
+  classes: ImageLabelingClass[];
+  image_meta: {
+    why_in_queue: string;
+    split: string;
+    scene_group: string;
+    augmented_children: string;
+  };
+  guideline: {
+    label: string;
+    desc: string;
+  };
+}
+
+export interface ImageLabelingCheck {
+  title: string;
+  sub: string;
+  count: number;
+}
+
+export interface ImageLabelingTeamMember {
+  annotator: string;
+  items_per_h: number;
+  accepts_ai: string;
+  agreement: string;
+  is_flagged?: boolean;
+}
+
+export interface ImageLabelingGuardrail {
+  title: string;
+  sub: string;
+  checked: boolean;
+  is_warning?: boolean;
+}
+
+export interface ImageLabelingDataResponse {
+  dataset_id: string;
+  dataset_name: string;
+  display_title: string;
+  breadcrumb: string;
+  kpis: ImageLabelingKPIs;
+  gauge: ImageLabelingGauge;
+  queues: ImageLabelingQueue[];
+  queue_settings: ImageLabelingQueueSettings;
+  workspace: ImageLabelingWorkspace;
+  label_checks: ImageLabelingCheck[];
+  team: ImageLabelingTeamMember[];
+  guardrails: ImageLabelingGuardrail[];
+  action_banner: {
+    summary: string;
+    detail: string;
+    secondary_action: string;
+    primary_action: string;
+  };
+}
+
+// ---------------------------------------------------------
+// IMAGE TRAINING (06 Training for images)
+// ---------------------------------------------------------
+export interface ImageTrainingKPIs {
+  runs: string;
+  runs_sub: string;
+  data: string;
+  data_sub: string;
+  compute: string;
+  compute_sub: string;
+  in_production: string;
+  in_production_sub: string;
+}
+
+export interface ImageTrainingAugmentationOption {
+  id: string;
+  name: string;
+  checked: boolean;
+}
+
+export interface ImageTrainingCheckBeforeStart {
+  title: string;
+  sub: string;
+  ok: boolean;
+  is_warning?: boolean;
+}
+
+export interface ImageTrainingNewRunConfig {
+  dataset_version: string;
+  train_view: string;
+  splits_info: string;
+  image_size_info: string;
+  on_the_fly_augmentation: ImageTrainingAugmentationOption[];
+  model_architecture: string;
+  epochs: number;
+  patience: number;
+  batch: number;
+  lr0: string;
+  optimize: string;
+  runs_on: string;
+  latency_budget: string;
+  compute: {
+    worker: string;
+    precision: string;
+    seed: string;
+    estimate: string;
+  };
+  checks_before_start: ImageTrainingCheckBeforeStart[];
+  command: string;
+}
+
+export interface ImageTrainingRun {
+  id: string;
+  data: string;
+  model: string;
+  status: string;
+  map50_val: string;
+  time: string;
+  tag: string;
+  is_running?: boolean;
+  progress_pct?: number;
+}
+
+export interface ImageTrainingValPreviewItem {
+  epoch: number;
+  box: string;
+  color: string;
+}
+
+export interface ImageTrainingRunsSection {
+  counts: { all: number; running: number; done: number };
+  runs: ImageTrainingRun[];
+  active_run: {
+    id: string;
+    status_tag: string;
+    header_sub: string;
+    val_preview: ImageTrainingValPreviewItem[];
+  };
+}
+
+export interface ImageTrainingSummaryKPIs {
+  map50: string;
+  map50_sub: string;
+  map50_95: string;
+  map50_95_sub: string;
+  recall_crack: string;
+  recall_crack_sub: string;
+  latency_device: string;
+  latency_device_sub: string;
+  test_set: string;
+  test_set_sub: string;
+}
+
+export interface ImageTrainingPerClass {
+  name: string;
+  boxes: number;
+  precision: string;
+  recall: string;
+  ap50: string;
+  is_rare?: boolean;
+}
+
+export interface ImageTrainingConfusionMatrix {
+  labels: string[];
+  matrix: number[][];
+}
+
+export interface ImageTrainingDeploymentThresholds {
+  confidence_all: number;
+  confidence_crack: number;
+  nms_iou: number;
+  false_alarms_per_1k: string;
+  missed_cracks_per_1k: string;
+}
+
+export interface ImageTrainingSlice {
+  slice: string;
+  images: number;
+  map50: string;
+  flag: string;
+  is_weak?: boolean;
+}
+
+export interface ImageTrainingErrorItem {
+  image_id: string;
+  tag: string;
+  tag_type: string;
+  desc: string;
+  action_label: string;
+  action_target: string;
+  thumb: string;
+}
+
+export interface ImageTrainingEvaluate {
+  selected_run: string;
+  selected_split: string;
+  summary_kpis: ImageTrainingSummaryKPIs;
+  per_class: ImageTrainingPerClass[];
+  confusion_matrix: ImageTrainingConfusionMatrix;
+  deployment_thresholds: ImageTrainingDeploymentThresholds;
+  slices: ImageTrainingSlice[];
+  errors_to_look_at: ImageTrainingErrorItem[];
+}
+
+export interface ImageTrainingComparisonItem {
+  metric: string;
+  prod: string;
+  cand: string;
+  change: string;
+  is_ok: boolean;
+}
+
+export interface ImageTrainingBeforeProductionItem {
+  label: string;
+  done: boolean;
+}
+
+export interface ImageTrainingEdgeBenchmark {
+  export: string;
+  latency: string;
+  map50_kept: string;
+  size: string;
+}
+
+export interface ImageTrainingCompareAndPromote {
+  comparison_table: ImageTrainingComparisonItem[];
+  before_production: ImageTrainingBeforeProductionItem[];
+  edge_benchmark: ImageTrainingEdgeBenchmark[];
+  replay_command: string;
+}
+
+export interface ImageTrainingGuardrail {
+  title: string;
+  sub: string;
+  checked: boolean;
+  is_warning?: boolean;
+}
+
+export interface ImageTrainingDataResponse {
+  dataset_id: string;
+  dataset_name: string;
+  display_title: string;
+  breadcrumb: string;
+  candidate_version: string;
+  kpis: ImageTrainingKPIs;
+  new_run_config: ImageTrainingNewRunConfig;
+  runs_section: ImageTrainingRunsSection;
+  evaluate: ImageTrainingEvaluate;
+  compare_and_promote: ImageTrainingCompareAndPromote;
+  guardrails: ImageTrainingGuardrail[];
+  action_banner: {
+    summary: string;
+    detail: string;
+    secondary_action: string;
+    primary_action: string;
+  };
+}
+
+
+export interface ImageActiveLearningBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  shape: string;
+}
+
+export interface ImageActiveLearningPick {
+  image_id: string;
+  tag: string;
+  tag_type: string;
+  description: string;
+  strategy_key: string;
+  defect_type: string;
+  line: string;
+  confidence: number;
+  box: ImageActiveLearningBox;
+}
+
+export interface ImageActiveLearningStrategy {
+  key: string;
+  name: string;
+  description: string;
+  share_pct: number;
+  images: number;
+  badge?: string;
+}
+
+export interface ImageActiveLearningRoundHistory {
+  round: string;
+  name: string;
+  images: string;
+  strategy: string;
+  hours: string;
+  data: string;
+  model: string;
+  ap_gain: string;
+  target_version: string;
+  status: string;
+}
+
+export interface ImageActiveLearningAutomationCard {
+  id: string;
+  label: string;
+  sub: string;
+  checked: boolean;
+  disabled: boolean;
+}
+
+export interface ImageActiveLearningGuardrail {
+  label: string;
+  description: string;
+  status: 'ok' | 'warning';
+}
+
+export interface ImageActiveLearningDataResponse {
+  dataset_id: string;
+  dataset_name: string;
+  round_badge: string;
+  round_state: string;
+  round_state_label: string;
+  subtitle: string;
+  metrics: {
+    pool: string;
+    pool_sub: string;
+    budget: string;
+    budget_sub: string;
+    rare_class: string;
+    rare_class_sub: string;
+    output: string;
+    output_sub: string;
+  };
+  info_banner: {
+    title: string;
+    text: string;
+  };
+  loop_steps: Array<{
+    step: string;
+    stat: string;
+    note: string;
+    status: string;
+  }>;
+  upload_rule: {
+    box_above: number;
+    box_below: number;
+    random_frame_in: number;
+    always_upload_crack: boolean;
+    frames_seen: string;
+    uploaded: string;
+    not_uploaded_pct: string;
+    note: string;
+  };
+  strategies: ImageActiveLearningStrategy[];
+  round_settings: {
+    images_this_round: number;
+    line1_min_pct: number;
+    line2_min_pct: number;
+    one_frame_per_scene: boolean;
+    send_dark_to_cleaning: boolean;
+    pre_annotate_model: string;
+    locked_note: string;
+    collection_alert: {
+      class_name: string;
+      real_boxes: string;
+      message: string;
+      action_label: string;
+    };
+  };
+  picks: ImageActiveLearningPick[];
+  all_picks_count: number;
+  rounds_history: ImageActiveLearningRoundHistory[];
+  learning_curve: {
+    metric_label: string;
+    metric_value: string;
+    metric_tooltip: string;
+    points_al: Array<{ x: string; y: number }>;
+    points_random: Array<{ x: string; y: number }>;
+  };
+  stop_rule: {
+    rule_text: string;
+    note: string;
+  };
+  pseudo_labels: {
+    status: string;
+    description: string;
+    button_label: string;
+  };
+  automation_cards: ImageActiveLearningAutomationCard[];
+  guardrails: ImageActiveLearningGuardrail[];
+  bottom_bar: {
+    text: string;
+    subtext: string;
+    save_draft_label: string;
+    send_label: string;
+  };
+}
