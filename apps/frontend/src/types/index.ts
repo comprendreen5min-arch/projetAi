@@ -1353,3 +1353,234 @@ export interface TextProfileResponse {
   duplicates?: TextDuplicatesInfo;
   quotes: TextDocumentQuote[];
 }
+
+export interface ImageHealthBar {
+  label: string;
+  pct: number;
+  color: 'amber' | 'red';
+}
+
+export interface ImageFindingItem {
+  rank: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  title: string;
+  subtitle: string;
+  action_label: string;
+}
+
+export interface ImageContactSheetItem {
+  id: string;
+  type: string;
+  count: number;
+  color: string;
+  card_style: string;
+  thumbnail_url?: string;
+}
+
+export interface ImageClassBar {
+  name: string;
+  count: number;
+  count_str: string;
+  pct: number;
+  color: string;
+}
+
+export interface ImageSizesAndBoxes {
+  most_common_size: string;
+  different_sizes: number;
+  boxes_per_image: number;
+  unlabeled: string;
+  box_sizes: Array<{
+    label: string;
+    pct: number;
+    color: string;
+  }>;
+}
+
+export interface ImageProfileResponse {
+  dataset_id: string;
+  dataset_name: string;
+  version_hash: string;
+  breadcrumb: string;
+  display_title: string;
+  kpis: {
+    images: string;
+    classes: number;
+    formats: string;
+    size: string;
+  };
+  health: {
+    score: number;
+    bars: ImageHealthBar[];
+  };
+  findings: ImageFindingItem[];
+  contact_sheet: ImageContactSheetItem[];
+  classes: {
+    total_count: number;
+    bars: ImageClassBar[];
+    footnote: string;
+  };
+  sizes_and_boxes: ImageSizesAndBoxes;
+}
+
+// ─── Text Cleaning Types (Mockups 1 & 2) ────────────────────────────────────
+export interface TextCleaningStep {
+  id: string;
+  rank: string;
+  title: string;
+  subtitle: string;
+  param_label: string;
+  param_value: string;
+  options: string[];
+  affected_count?: number;
+  count_label: string;
+  enabled: boolean;
+  is_later?: boolean;
+  badge?: string;
+  status: string;
+}
+
+export interface TextCleaningPreviewRow {
+  doc: string;
+  before: string;
+  after: string;
+  highlight?: string;
+  badge?: string;
+  lang?: string;
+}
+
+export interface TextCleaningPreview {
+  step_header: string;
+  rows: TextCleaningPreviewRow[];
+  footnote: string;
+}
+
+export interface TextQualityImpactMetric {
+  before?: number;
+  after?: number;
+  value?: number;
+  label: string;
+  subtitle?: string;
+}
+
+export interface TextQualityImpact {
+  completeness: TextQualityImpactMetric;
+  uniqueness: TextQualityImpactMetric;
+  encoding: TextQualityImpactMetric;
+  privacy: TextQualityImpactMetric;
+  label_balance: TextQualityImpactMetric;
+}
+
+export interface TextCleaningRecipeResponse {
+  dataset_id: string;
+  dataset_name: string;
+  version_hash: string;
+  breadcrumb: string;
+  display_title: string;
+  kpis: {
+    documents: string;
+    documents_was: string;
+    languages: number;
+    languages_detail: string;
+    texts_edited: string;
+    texts_edited_pct: string;
+    output: string;
+    output_sub: string;
+  };
+  health: {
+    before: number;
+    after: number;
+  };
+  steps: TextCleaningStep[];
+  preview_step_id: string;
+  previews: Record<string, TextCleaningPreview>;
+  quality_impact: TextQualityImpact;
+  action_banner: {
+    title: string;
+    subtitle: string;
+    dry_run_btn: string;
+    apply_btn: string;
+  };
+  applied?: boolean;
+  new_version_hash?: string;
+}
+
+// ─── Image Cleaning Types (Mockups 1 & 2) ───────────────────────────────────
+export interface ImageCleaningStep {
+  id: string;
+  rank: string;
+  title: string;
+  subtitle: string;
+  param_label: string;
+  param_value: string;
+  options: string[];
+  affected_count?: number;
+  count_label: string;
+  enabled: boolean;
+  is_later?: boolean;
+  badge?: string;
+  status: string;
+}
+
+export interface ImageCleaningPreviewPair {
+  before_label: string;
+  before_img: string;
+  after_label: string;
+  after_img: string;
+}
+
+export interface ImageCleaningPreview {
+  step_header: string;
+  pairs: ImageCleaningPreviewPair[];
+  footnote: string;
+}
+
+export interface ImageQualityImpactMetric {
+  before?: number;
+  after?: number;
+  value?: number;
+  label: string;
+  subtitle?: string;
+}
+
+export interface ImageQualityImpact {
+  readability: ImageQualityImpactMetric;
+  uniqueness: ImageQualityImpactMetric;
+  image_quality: ImageQualityImpactMetric;
+  label_coverage: ImageQualityImpactMetric;
+  class_balance: ImageQualityImpactMetric;
+}
+
+export interface ImageCleaningRecipeResponse {
+  dataset_id: string;
+  dataset_name: string;
+  version_hash: string;
+  breadcrumb: string;
+  display_title: string;
+  kpis: {
+    images: string;
+    images_was: string;
+    classes: number;
+    classes_sub: string;
+    images_fixed: string;
+    images_fixed_sub: string;
+    output: string;
+    output_sub: string;
+  };
+  health: {
+    before: number;
+    after: number;
+  };
+  steps: ImageCleaningStep[];
+  preview_step_id: string;
+  previews: Record<string, ImageCleaningPreview>;
+  quality_impact: ImageQualityImpact;
+  action_banner: {
+    title: string;
+    subtitle: string;
+    dry_run_btn: string;
+    apply_btn: string;
+  };
+  applied?: boolean;
+  new_version_hash?: string;
+}

@@ -36,6 +36,12 @@ dmypy.json
 *.pem
 *.key
 *.cert
+*.crt
+*.pfx
+*.p12
+*.secret
+*.token
+api_keys.json
 
 # Databases & local storage
 *.db
@@ -50,6 +56,8 @@ dmypy.json
 *.sqlite3-journal
 *.sqlite3-wal
 *.sqlite3-shm
+*.sql
+*.dump
 
 # Machine Learning model weights and serialization
 *.pkl
@@ -60,6 +68,16 @@ dmypy.json
 *.pth
 *.bin
 *.weights
+*.safetensors
+*.ckpt
+*.h5
+*.hdf5
+*.keras
+*.tflite
+*.ftz
+wandb/
+mlruns/
+.tensorboard/
 
 # Pytest / Coverage
 .pytest_cache/
@@ -70,13 +88,17 @@ coverage/
 
 # Data artifacts & storage
 *.parquet
-apps/backend/storage/*
+storage/
+uploads/
+apps/backend/storage/**
 !apps/backend/storage/datasets/
-apps/backend/storage/datasets/*
 !apps/backend/storage/datasets/.gitkeep
 
 # Node / React / Vite
 node_modules/
+.npm/
+.yarn/
+.pnpm-store/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -123,6 +145,10 @@ $RECYCLE.BIN/
 *.tmp
 *.temp
 *.bak
+tmp/
+temp/
+.tmp/
+.temp/
 
 # Reports & export downloads (Step 09 Export / API)
 *drift-report*.json
@@ -133,9 +159,6 @@ datalift-export-*/
 model-package-*/
 apps/backend/storage/exports/*
 apps/backend/storage/models/*
-api_keys.json
-*.secret
-*.token
 *.jsonl
 *.xlsx
 *.feather
@@ -143,6 +166,12 @@ api_keys.json
 *.tar
 *.tar.gz
 *.zip
+*.7z
+*.rar
+*.bz2
+*.xz
+*.csv.gz
+*.tsv.gz
 
 # Cache, build & patch artifacts
 .turbo/
@@ -160,3 +189,4 @@ playwright-report/
 
 # Docker
 docker-compose.override.yml
+.docker/

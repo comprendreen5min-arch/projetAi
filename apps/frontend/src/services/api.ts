@@ -42,6 +42,9 @@ import {
   UpdateExportSettingsRequest,
   DeployToStagingResponse,
   TextProfileResponse,
+  ImageProfileResponse,
+  TextCleaningRecipeResponse,
+  ImageCleaningRecipeResponse,
 } from '../types';
 
 
@@ -558,6 +561,54 @@ export const api = {
     const res = await apiClient.post<TextProfileResponse>('/text-profiling/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return res.data;
+  },
+
+  async getImageProfile(datasetId: string, versionHash?: string): Promise<ImageProfileResponse> {
+    const params = versionHash ? { version_hash: versionHash } : {};
+    const res = await apiClient.get<ImageProfileResponse>(`/image-profiling/${datasetId}/profile`, { params });
+    return res.data;
+  },
+
+  async uploadImageArchive(file: File, datasetName?: string): Promise<ImageProfileResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (datasetName) formData.append('dataset_name', datasetName);
+    const res = await apiClient.post<ImageProfileResponse>('/image-profiling/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
+  async getTextCleaningRecipe(datasetId: string, versionHash?: string): Promise<TextCleaningRecipeResponse> {
+    const params = versionHash ? { version_hash: versionHash } : {};
+    const res = await apiClient.get<TextCleaningRecipeResponse>(`/text-cleaning/${datasetId}/recipe`, { params });
+    return res.data;
+  },
+
+  async dryRunTextCleaningRecipe(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-cleaning/${datasetId}/dry-run`, payload);
+    return res.data;
+  },
+
+  async applyTextCleaningRecipe(datasetId: string, payload: any): Promise<TextCleaningRecipeResponse> {
+    const res = await apiClient.post<TextCleaningRecipeResponse>(`/text-cleaning/${datasetId}/apply`, payload);
+    return res.data;
+  },
+
+  async getImageCleaningRecipe(datasetId: string, versionHash?: string): Promise<ImageCleaningRecipeResponse> {
+    const params = versionHash ? { version_hash: versionHash } : {};
+    const res = await apiClient.get<ImageCleaningRecipeResponse>(`/image-cleaning/${datasetId}/recipe`, { params });
+    return res.data;
+  },
+
+  async dryRunImageCleaningRecipe(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-cleaning/${datasetId}/dry-run`, payload);
+    return res.data;
+  },
+
+  async applyImageCleaningRecipe(datasetId: string, payload: any): Promise<ImageCleaningRecipeResponse> {
+    const res = await apiClient.post<ImageCleaningRecipeResponse>(`/image-cleaning/${datasetId}/apply`, payload);
     return res.data;
   },
 };

@@ -12,11 +12,14 @@ import { ActiveLearningPage } from './pages/ActiveLearningPage';
 import { DriftPage } from './pages/DriftPage';
 import { ExportApiPage } from './pages/ExportApiPage';
 import { TextProfilingPage } from './pages/TextProfilingPage';
+import { TextCleaningPage } from './pages/TextCleaningPage';
+import { ImageProfilingPage } from './pages/ImageProfilingPage';
+import { ImageCleaningPage } from './pages/ImageCleaningPage';
 import { ArrowRight, Download } from 'lucide-react';
 import { api } from './services/api';
 
 // Top bar matching the target mockup
-const TopBar: React.FC<{ modality: 'tabular' | 'text'; onModalityChange: (m: 'tabular' | 'text') => void }> = ({
+const TopBar: React.FC<{ modality: 'tabular' | 'text' | 'image'; onModalityChange: (m: 'tabular' | 'text' | 'image') => void }> = ({
   modality,
   onModalityChange,
 }) => {
@@ -78,14 +81,17 @@ const TopBar: React.FC<{ modality: 'tabular' | 'text'; onModalityChange: (m: 'ta
         </button>
         <button
           type="button"
+          onClick={() => onModalityChange('image')}
           style={{
             background: 'none',
             border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'not-allowed',
+            color: modality === 'image' ? 'var(--text-main)' : 'var(--text-muted)',
+            fontWeight: modality === 'image' ? 600 : 400,
+            cursor: 'pointer',
             paddingBottom: '0.25rem',
+            borderBottom: modality === 'image' ? '2px solid var(--amber)' : '2px solid transparent',
+            transition: 'all 0.15s',
           }}
-          title="Bientôt disponible"
         >
           Images
         </button>
@@ -93,7 +99,45 @@ const TopBar: React.FC<{ modality: 'tabular' | 'text'; onModalityChange: (m: 'ta
 
       {/* Action buttons */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        {location.pathname === '/cleaning' ? (
+        {location.pathname === '/cleaning' && modality === 'image' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:export-image-recipe'))}
+            >
+              Export recipe
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => navigate('/augmentation')}
+            >
+              <span>Continue to augmentation →</span>
+            </button>
+          </>
+        ) : location.pathname === '/cleaning' && modality === 'text' ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary font-mono"
+              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('datalift:export-text-recipe'))}
+            >
+              Export recipe
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary font-mono"
+              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+              onClick={() => navigate('/augmentation')}
+            >
+              <span>Continue to augmentation →</span>
+            </button>
+          </>
+        ) : location.pathname === '/cleaning' ? (
           <>
             <button
               type="button"
@@ -281,21 +325,37 @@ const TopBar: React.FC<{ modality: 'tabular' | 'text'; onModalityChange: (m: 'ta
 };
 
 export const App: React.FC = () => {
-  const [modality, setModality] = useState<'tabular' | 'text'>(() => {
-    return (localStorage.getItem('datalift_modality') as 'tabular' | 'text') || 'tabular';
+  const [modality, setModality] = useState<'tabular' | 'text' | 'image'>(() => {
+    return (localStorage.getItem('datalift_modality') as 'tabular' | 'text' | 'image') || 'tabular';
   });
 
-  const handleModalityChange = (m: 'tabular' | 'text') => {
+  const handleModalityChange = (m: 'tabular' | 'text' | 'image') => {
     setModality(m);
     localStorage.setItem('datalift_modality', m);
     window.dispatchEvent(new CustomEvent('datalift:modality-changed', { detail: m }));
 
     if (m === 'text') {
       api.getDatasets().then(list => {
-        const textDs = list.find(d => d.name.includes('nlp') || d.name.includes('review') || d.name.includes('text'));
+        const textDs = list.find(d => d.name === 'test_texte.txt' || d.name === 'support_tickets.jsonl' || d.name.includes('nlp') || d.name.includes('review') || d.name.includes('text'));
         if (textDs) {
           localStorage.setItem('datalift_selected_dataset_id', textDs.id);
           window.dispatchEvent(new CustomEvent('datalift:dataset-changed', { detail: textDs.id }));
+        }
+      }).catch(() => {});
+    } else if (m === 'image') {
+      api.getDatasets().then(list => {
+        const imgDs = list.find(d => d.name === 'product_defects/' || d.name.includes('defect') || d.name.includes('image'));
+        if (imgDs) {
+          localStorage.setItem('datalift_selected_dataset_id', imgDs.id);
+          window.dispatchEvent(new CustomEvent('datalift:dataset-changed', { detail: imgDs.id }));
+        }
+      }).catch(() => {});
+    } else if (m === 'tabular') {
+      api.getDatasets().then(list => {
+        const tabDs = list.find(d => !d.name.includes('defect') && !d.name.endsWith('.txt') && !d.name.endsWith('.jsonl') && (d.name.includes('churn') || d.name === 'data' || d.name === 'test'));
+        if (tabDs) {
+          localStorage.setItem('datalift_selected_dataset_id', tabDs.id);
+          window.dispatchEvent(new CustomEvent('datalift:dataset-changed', { detail: tabDs.id }));
         }
       }).catch(() => {});
     }
@@ -316,12 +376,29 @@ export const App: React.FC = () => {
               <Routes>
               <Route path="/" element={<Navigate to="/versioning" replace />} />
               
-              {/* 01. Profiling (Tabular or Text depending on active modality) */}
-              <Route path="/profiling" element={modality === 'text' ? <TextProfilingPage /> : <ProfilingPage />} />
+              {/* 01. Profiling (Tabular, Text or Image depending on active modality) */}
+              <Route
+                path="/profiling"
+                element={
+                  modality === 'image' ? <ImageProfilingPage /> :
+                  modality === 'text' ? <TextProfilingPage /> :
+                  <ProfilingPage />
+                }
+              />
               <Route path="/text-profiling" element={<TextProfilingPage />} />
+              <Route path="/image-profiling" element={<ImageProfilingPage />} />
 
               {/* 02. Cleaning */}
-              <Route path="/cleaning" element={<CleaningPage />} />
+              <Route
+                path="/cleaning"
+                element={
+                  modality === 'image' ? <ImageCleaningPage /> :
+                  modality === 'text' ? <TextCleaningPage /> :
+                  <CleaningPage />
+                }
+              />
+              <Route path="/text-cleaning" element={<TextCleaningPage />} />
+              <Route path="/image-cleaning" element={<ImageCleaningPage />} />
 
               {/* 03. Augmentation */}
               <Route path="/augmentation" element={<AugmentationPage />} />
