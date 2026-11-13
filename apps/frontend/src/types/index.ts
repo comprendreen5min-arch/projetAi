@@ -1696,3 +1696,116 @@ export interface TextAugmentationComparisonResponse {
   details?: Record<string, { without: number; with: number }>;
   message?: string;
 }
+
+export interface ImageAugmentationTechnique {
+  id: string;
+  rank: string;
+  title: string;
+  badge?: string;
+  subtitle: string;
+  param_label: string;
+  param_value: string;
+  options: string[];
+  count_label: string;
+  enabled: boolean;
+  status: string;
+}
+
+export interface ImageAugmentationPreviewCard {
+  label?: string;
+  card_title?: string;
+  sub: string;
+  image_url?: string;
+  img?: string;
+  is_new?: boolean;
+}
+
+export interface ImageAugmentationPreview {
+  header: string;
+  cards: ImageAugmentationPreviewCard[];
+  footnote: string;
+}
+
+export interface ImageAugmentationGuardrail {
+  title: string;
+  subtitle: string;
+  checked: boolean;
+  type?: 'check' | 'warning';
+}
+
+export interface ImageAugmentationClassBalance {
+  name: string;
+  real: number;
+  generated: number;
+  target: number;
+  is_capped: boolean;
+  is_critical?: boolean;
+}
+
+export interface ImageAugmentationRecipeResponse {
+  dataset_id: string;
+  dataset_name: string;
+  version_hash: string;
+  breadcrumb: string;
+  display_title: string;
+  kpis: {
+    images_in_train: string;
+    images_in_train_was: string;
+    generated: string;
+    generated_sub: string;
+    test_set: string;
+    test_set_sub: string;
+    output: string;
+    output_sub: string;
+  };
+  class_balance: {
+    before: number;
+    after: number;
+    label: string;
+  };
+  split_config: {
+    train_pct: number;
+    val_pct: number;
+    test_pct: number;
+    ratio: string;
+    ratio_options: string[];
+    group_by: string;
+    group_by_options: string[];
+    stratify: string;
+    stratify_options: string[];
+    footnote: string;
+  };
+  target_balance: {
+    selected_mode: string;
+    modes: { id: string; label: string }[];
+    classes: ImageAugmentationClassBalance[];
+    note: string;
+  };
+  techniques: ImageAugmentationTechnique[];
+  preview_technique_id: string;
+  previews: Record<string, ImageAugmentationPreview>;
+  guardrails: ImageAugmentationGuardrail[];
+  comparison: {
+    metric: string;
+    without_v2?: number | null;
+    with_v3?: number | null;
+    delta?: string | null;
+  };
+  action_banner: {
+    title: string;
+    subtitle: string;
+    send_training_btn: string;
+    save_v3_btn: string;
+  };
+  saved?: boolean;
+  new_version_hash?: string;
+}
+
+export interface ImageAugmentationComparisonResponse {
+  metric: string;
+  without_v2: number;
+  with_v3: number;
+  delta: string;
+  details?: Record<string, { without: number; with: number }>;
+  message?: string;
+}
