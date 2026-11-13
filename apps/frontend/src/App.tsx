@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -11,10 +11,15 @@ import { TrainingPage } from './pages/TrainingPage';
 import { ActiveLearningPage } from './pages/ActiveLearningPage';
 import { DriftPage } from './pages/DriftPage';
 import { ExportApiPage } from './pages/ExportApiPage';
+import { TextProfilingPage } from './pages/TextProfilingPage';
 import { ArrowRight, Download } from 'lucide-react';
+import { api } from './services/api';
 
 // Top bar matching the target mockup
-const TopBar: React.FC = () => {
+const TopBar: React.FC<{ modality: 'tabular' | 'text'; onModalityChange: (m: 'tabular' | 'text') => void }> = ({
+  modality,
+  onModalityChange,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -41,28 +46,33 @@ const TopBar: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', fontSize: '0.82rem' }}>
         <button
           type="button"
+          onClick={() => onModalityChange('tabular')}
           style={{
             background: 'none',
             border: 'none',
-            color: 'var(--text-main)',
-            fontWeight: 500,
+            color: modality === 'tabular' ? 'var(--text-main)' : 'var(--text-muted)',
+            fontWeight: modality === 'tabular' ? 600 : 400,
             cursor: 'pointer',
             paddingBottom: '0.25rem',
-            borderBottom: '2px solid var(--amber)',
+            borderBottom: modality === 'tabular' ? '2px solid var(--amber)' : '2px solid transparent',
+            transition: 'all 0.15s',
           }}
         >
           Tabulaire
         </button>
         <button
           type="button"
+          onClick={() => onModalityChange('text')}
           style={{
             background: 'none',
             border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'not-allowed',
+            color: modality === 'text' ? 'var(--text-main)' : 'var(--text-muted)',
+            fontWeight: modality === 'text' ? 600 : 400,
+            cursor: 'pointer',
             paddingBottom: '0.25rem',
+            borderBottom: modality === 'text' ? '2px solid var(--amber)' : '2px solid transparent',
+            transition: 'all 0.15s',
           }}
-          title="Bientôt disponible"
         >
           Texte
         </button>
@@ -271,6 +281,26 @@ const TopBar: React.FC = () => {
 };
 
 export const App: React.FC = () => {
+  const [modality, setModality] = useState<'tabular' | 'text'>(() => {
+    return (localStorage.getItem('datalift_modality') as 'tabular' | 'text') || 'tabular';
+  });
+
+  const handleModalityChange = (m: 'tabular' | 'text') => {
+    setModality(m);
+    localStorage.setItem('datalift_modality', m);
+    window.dispatchEvent(new CustomEvent('datalift:modality-changed', { detail: m }));
+
+    if (m === 'text') {
+      api.getDatasets().then(list => {
+        const textDs = list.find(d => d.name.includes('nlp') || d.name.includes('review') || d.name.includes('text'));
+        if (textDs) {
+          localStorage.setItem('datalift_selected_dataset_id', textDs.id);
+          window.dispatchEvent(new CustomEvent('datalift:dataset-changed', { detail: textDs.id }));
+        }
+      }).catch(() => {});
+    }
+  };
+
   return (
     <BrowserRouter>
       <div className="app-layout">
@@ -279,15 +309,16 @@ export const App: React.FC = () => {
 
         {/* Main Content Area */}
         <div className="main-content">
-          <TopBar />
+          <TopBar modality={modality} onModalityChange={handleModalityChange} />
           
           <main style={{ flex: 1, overflowY: 'auto' }}>
             <ErrorBoundary>
               <Routes>
               <Route path="/" element={<Navigate to="/versioning" replace />} />
               
-              {/* 01. Profiling (Phase A Functional Module) */}
-              <Route path="/profiling" element={<ProfilingPage />} />
+              {/* 01. Profiling (Tabular or Text depending on active modality) */}
+              <Route path="/profiling" element={modality === 'text' ? <TextProfilingPage /> : <ProfilingPage />} />
+              <Route path="/text-profiling" element={<TextProfilingPage />} />
 
               {/* 02. Cleaning */}
               <Route path="/cleaning" element={<CleaningPage />} />
