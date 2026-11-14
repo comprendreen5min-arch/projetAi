@@ -75,6 +75,10 @@ api_keys.json
 *.keras
 *.tflite
 *.ftz
+*.engine
+*.blob
+runs/
+yolo-runs/
 wandb/
 mlruns/
 .tensorboard/
@@ -159,6 +163,10 @@ datalift-export-*/
 model-package-*/
 apps/backend/storage/exports/*
 apps/backend/storage/models/*
+apps/backend/storage/packages/*
+*telemetry*.json
+*device-dump*.json
+*.openvino
 *.jsonl
 *.xlsx
 *.feather

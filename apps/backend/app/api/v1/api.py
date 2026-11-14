@@ -2,8 +2,8 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     datasets, versions, transformations, cleaning, augmentation,
     labeling, training, active_learning, drift, export_api,
-    text_profiling, text_cleaning, text_augmentation, text_versioning, text_labeling, text_training, text_active_learning,
-    image_profiling, image_cleaning, image_augmentation, image_versioning, image_labeling, image_training, image_active_learning
+    text_profiling, text_cleaning, text_augmentation, text_versioning, text_labeling, text_training, text_active_learning, text_drift, text_export_api,
+    image_profiling, image_cleaning, image_augmentation, image_versioning, image_labeling, image_training, image_active_learning, image_drift, image_export_api
 )
 
 api_router = APIRouter()
@@ -25,6 +25,8 @@ api_router.include_router(text_versioning.router, prefix="/text-versioning", tag
 api_router.include_router(text_labeling.router, prefix="/text-labeling", tags=["Text Labeling"])
 api_router.include_router(text_training.router, prefix="/text-training", tags=["Text Training"])
 api_router.include_router(text_active_learning.router, prefix="/text-active-learning", tags=["Text Active Learning"])
+api_router.include_router(text_drift.router, prefix="/text-drift", tags=["Text Drift"])
+api_router.include_router(text_export_api.router, prefix="/text-export-api", tags=["Text Export API"])
 api_router.include_router(image_profiling.router, prefix="/image-profiling", tags=["Image Profiling"])
 api_router.include_router(image_cleaning.router, prefix="/image-cleaning", tags=["Image Cleaning"])
 api_router.include_router(image_augmentation.router, prefix="/image-augmentation", tags=["Image Augmentation"])
@@ -32,6 +34,8 @@ api_router.include_router(image_versioning.router, prefix="/image-versioning", t
 api_router.include_router(image_labeling.router, prefix="/image-labeling", tags=["Image Labeling"])
 api_router.include_router(image_training.router, prefix="/image-training", tags=["Image Training"])
 api_router.include_router(image_active_learning.router, prefix="/image-active-learning", tags=["Image Active Learning"])
+api_router.include_router(image_drift.router, prefix="/image-drift", tags=["Image Drift"])
+api_router.include_router(image_export_api.router, prefix="/image-export-api", tags=["Image Export API"])
 
 
 
