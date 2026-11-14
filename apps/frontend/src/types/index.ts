@@ -3017,3 +3017,657 @@ export interface ImageActiveLearningDataResponse {
     send_label: string;
   };
 }
+
+// Text Drift Types
+export interface TextDriftSignal {
+  id: string;
+  signal: string;
+  kind: string;
+  test: string;
+  what_changed: string;
+  weight: string;
+  distance: string;
+  distance_val: string;
+  status: string;
+  status_type: 'red' | 'amber' | 'gray';
+}
+
+export interface TextDriftSelectedCluster {
+  title: string;
+  badge: string;
+  subtitle: string;
+  labels: string[];
+  train_bars: number[];
+  live_bars: number[];
+  frequent_words: string;
+  actions: {
+    send_to_07: string;
+    propose_label: string;
+  };
+}
+
+export interface TextDriftQualityCheck {
+  check: string;
+  where: string;
+  live: string;
+  expected: string;
+  status: string;
+  status_type: 'red' | 'amber' | 'gray';
+  action_label: string;
+  action_route: string;
+}
+
+export interface TextDriftImpactKPI {
+  title: string;
+  value: string;
+  tooltip: string;
+  sub: string;
+}
+
+export interface TextDriftImpactSegment {
+  segment: string;
+  tickets: string;
+  f1_est: string;
+  f1_tooltip: string;
+  flag: string;
+  flag_type: 'amber' | 'red' | 'gray';
+}
+
+export interface TextDriftActionCard {
+  type: string;
+  title: string;
+  description: string;
+  action_label: string;
+  action_key: string;
+  is_recommended: boolean;
+}
+
+export interface TextDriftChecklistItem {
+  label: string;
+  sub: string;
+  checked: boolean;
+  disabled?: boolean;
+}
+
+export interface TextDriftGuardrail {
+  label: string;
+  description: string;
+  status: 'ok' | 'warning';
+}
+
+export interface TextDriftDataResponse {
+  dataset_id: string;
+  dataset_name: string;
+  subtitle: string;
+  alert_badge: {
+    tag: string;
+    count: string;
+    label: string;
+  };
+  metrics: {
+    reference: string;
+    reference_sub: string;
+    live_window: string;
+    live_window_sub: string;
+    signals_watched: string;
+    signals_watched_sub: string;
+    last_check: string;
+    last_check_sub: string;
+  };
+  info_banner: {
+    title: string;
+    text: string;
+  };
+  over_time: {
+    subtitle: string;
+    event_marker: string;
+    footnote_left: string;
+    footnote_right: string;
+    threshold_drift: number;
+    threshold_watch: number;
+    dates: string[];
+    series: Array<{
+      name: string;
+      color: string;
+      type: string;
+    }>;
+  };
+  signals: TextDriftSignal[];
+  selected_cluster: TextDriftSelectedCluster;
+  data_quality: {
+    subtitle: string;
+    summary: {
+      failed: number;
+      to_review: number;
+      passed: number;
+    };
+    checks: TextDriftQualityCheck[];
+    footnote: string;
+  };
+  model_impact: {
+    subtitle: string;
+    kpis: TextDriftImpactKPI[];
+    segments: TextDriftImpactSegment[];
+    footnote: string;
+  };
+  what_to_do: {
+    subtitle: string;
+    cards: TextDriftActionCard[];
+  };
+  monitoring: {
+    subtitle: string;
+    checklist: TextDriftChecklistItem[];
+    thresholds: {
+      distance_watch: number;
+      distance_drift: number;
+      window_days: string;
+      min_tickets: number;
+      send_email: boolean;
+      send_slack: boolean;
+      send_webhook: boolean;
+      cli_command: string;
+    };
+  };
+  guardrails: TextDriftGuardrail[];
+  bottom_bar: {
+    title: string;
+    sub: string;
+    action_left: string;
+    action_right: string;
+  };
+}
+
+// Text Export / API Types (09 Export / API)
+export interface TextExportHeader {
+  breadcrumb: string;
+  model_title: string;
+  model_arch: string;
+  badge_approved: string;
+  versions_live: string;
+  model_name: string;
+  model_sub: string;
+  in_production: string;
+  in_production_sub: string;
+  endpoint: string;
+  endpoint_sub: string;
+  tickets_7d: string;
+  tickets_7d_sub: string;
+  info_banner: string;
+}
+
+export interface TextExportDatasetVersion {
+  version: string;
+  size: string;
+  made_from: string;
+  state: string;
+  state_type: 'dashed' | 'current' | 'tagged';
+  is_tagged: boolean;
+}
+
+export interface TextExportFormat {
+  id: string;
+  name: string;
+  desc: string;
+  is_selected?: boolean;
+}
+
+export interface TextExportDatasetOptions {
+  keep_splits: boolean;
+  keep_splits_sub: string;
+  mask_pii: boolean;
+  mask_pii_sub: string;
+  include_paraphrases: boolean;
+  include_paraphrases_sub: string;
+  add_embeddings: boolean;
+  add_embeddings_sub: string;
+  add_label_history: boolean;
+  add_label_history_sub: string;
+}
+
+export interface TextExportModelPackageFormat {
+  id: string;
+  name: string;
+  desc: string;
+  tag: string;
+  is_selected: boolean;
+}
+
+export interface TextExportChecklistItem {
+  title: string;
+  desc: string;
+  checked: boolean;
+}
+
+export interface TextExportDeployStep {
+  num: number;
+  title: string;
+  name: string;
+  status: 'done' | 'active' | 'waiting';
+  detail: string;
+}
+
+export interface TextExportDeployOption {
+  id: string;
+  title: string;
+  desc: string;
+  is_selected: boolean;
+}
+
+export interface TextExportApiKey {
+  name: string;
+  key_masked: string;
+  status: 'LIVE' | 'TEST';
+  last_used: string;
+}
+
+export interface TextExportWebhook {
+  event: string;
+  desc: string;
+  enabled: boolean;
+}
+
+export interface TextExportTrafficKPI {
+  title: string;
+  value: string;
+  tooltip: string;
+  sub: string;
+}
+
+export interface TextExportTrafficRow {
+  version: string;
+  runs_on: string;
+  status: string;
+  status_type: 'production' | 'staging' | 'archived';
+  traffic: string;
+  p95: string;
+  errors: string;
+  action_label: string;
+  action_key: string;
+}
+
+export interface TextExportGuardrail {
+  title: string;
+  desc: string;
+  status: 'ok' | 'warn';
+}
+
+export interface TextExportStateResponse {
+  dataset_id: string;
+  dataset_name: string;
+  header: TextExportHeader;
+  datasets: {
+    subtitle: string;
+    versions: TextExportDatasetVersion[];
+    selected_version: string;
+    formats: TextExportFormat[];
+    options: TextExportDatasetOptions;
+    summary_chip: string;
+    python_snippet: string;
+    rest_snippet: string;
+    download_label: string;
+    footnote: string;
+  };
+  model_package: {
+    subtitle: string;
+    formats: TextExportModelPackageFormat[];
+    footnote: string;
+    checklist: TextExportChecklistItem[];
+    cli_snippet: string;
+    build_action: string;
+    model_card_action: string;
+  };
+  deploy: {
+    subtitle: string;
+    steps: TextExportDeployStep[];
+    options: TextExportDeployOption[];
+  };
+  api: {
+    subtitle: string;
+    method: string;
+    endpoint_path: string;
+    curl_snippet: string;
+    python_snippet: string;
+    response_json: string;
+    api_keys: TextExportApiKey[];
+    rate_limit: string;
+    max_input: string;
+    webhooks: TextExportWebhook[];
+    footnote: string;
+  };
+  versions_traffic: {
+    subtitle: string;
+    kpis: TextExportTrafficKPI[];
+    rows: TextExportTrafficRow[];
+    footnote: string;
+  };
+  guardrails: TextExportGuardrail[];
+  bottom_bar: {
+    title: string;
+    sub: string;
+    action_left: string;
+    action_right: string;
+  };
+}
+
+// Image Drift Types (08 Drift for Images)
+export interface ImageDriftSignal {
+  id: string;
+  signal: string;
+  kind: string;
+  test: string;
+  what_changed: string;
+  weight: string;
+  distance: string;
+  distance_val?: string;
+  status: string;
+  status_type: 'red' | 'amber' | 'gray';
+}
+
+export interface ImageDriftSignalDetail {
+  title: string;
+  badge: string;
+  subtitle: string;
+  labels: string[];
+  train_bars: number[];
+  live_bars: number[];
+  description: string;
+  actions: {
+    action_primary: string;
+    action_secondary: string;
+  };
+}
+
+export interface ImageDriftQualityCheck {
+  check: string;
+  where: string;
+  live: string;
+  expected: string;
+  status: string;
+  status_type: 'red' | 'amber' | 'gray';
+  action_label: string;
+  action_key: string;
+}
+
+export interface ImageDriftImpactKPI {
+  title: string;
+  value: string;
+  tooltip: string;
+  sub: string;
+}
+
+export interface ImageDriftImpactSegment {
+  segment: string;
+  frames: string;
+  map_est: string;
+  map_tooltip: string;
+  flag: string;
+  flag_type: 'red' | 'amber' | 'gray';
+}
+
+export interface ImageDriftActionCard {
+  type: string;
+  title: string;
+  description: string;
+  action_label: string;
+  action_key: string;
+  is_recommended: boolean;
+}
+
+export interface ImageDriftChecklistItem {
+  label: string;
+  sub: string;
+  checked: boolean;
+  disabled?: boolean;
+}
+
+export interface ImageDriftGuardrail {
+  title: string;
+  desc: string;
+  status: 'ok' | 'warn';
+}
+
+export interface ImageDriftDataResponse {
+  dataset_id: string;
+  dataset_name: string;
+  display_title: string;
+  subtitle: string;
+  alert_badge: {
+    tag: string;
+    count: string;
+    label: string;
+  };
+  metrics: {
+    reference: string;
+    reference_sub: string;
+    live_window: string;
+    live_window_sub: string;
+    signals_watched: string;
+    signals_watched_sub: string;
+    last_check: string;
+    last_check_sub: string;
+  };
+  info_banner: {
+    title: string;
+    text: string;
+  };
+  over_time: {
+    subtitle: string;
+    event_markers: Array<{ date: string; label: string }>;
+    footnote_left: string;
+    footnote_right: string;
+    threshold_drift: number;
+    threshold_watch: number;
+    dates: string[];
+    series: Array<{ name: string; color: string; type: string }>;
+  };
+  signals: ImageDriftSignal[];
+  selected_signal_detail: ImageDriftSignalDetail;
+  data_quality: {
+    subtitle: string;
+    summary: {
+      failed: number;
+      to_review: number;
+      passed: number;
+    };
+    checks: ImageDriftQualityCheck[];
+    footnote: string;
+  };
+  model_impact: {
+    subtitle: string;
+    kpis: ImageDriftImpactKPI[];
+    segments: ImageDriftImpactSegment[];
+    footnote: string;
+  };
+  what_to_do: {
+    subtitle: string;
+    cards: ImageDriftActionCard[];
+  };
+  monitoring: {
+    subtitle: string;
+    checklist: ImageDriftChecklistItem[];
+    thresholds: {
+      ks_watch_from: number;
+      ks_drift_from: number;
+      window: string;
+      min_frames_cam: number;
+      send_email: boolean;
+      send_slack: boolean;
+      send_webhook: boolean;
+      cli_command: string;
+    };
+  };
+  guardrails: ImageDriftGuardrail[];
+  bottom_bar: {
+    title: string;
+    sub: string;
+    action_left: string;
+    action_right: string;
+  };
+}
+
+
+
+// ==========================================
+// Step 09: Image Export / API Interfaces
+// ==========================================
+
+export interface ImageExportDatasetVersion {
+  version: string;
+  size: string;
+  size_val?: string;
+  made_from: string;
+  state: string;
+  state_type: 'draft' | 'current' | 'tagged';
+  is_current: boolean;
+}
+
+export interface ImageExportDatasetFormat {
+  id: string;
+  name: string;
+  description: string;
+  selected?: boolean;
+}
+
+export interface ImageExportOption {
+  id: string;
+  label: string;
+  sub: string;
+  checked: boolean;
+}
+
+export interface ImageExportModelPackageFormat {
+  id: string;
+  name: string;
+  description: string;
+  sub: string;
+  selected?: boolean;
+}
+
+export interface ImageExportWhatShips {
+  label: string;
+  sub: string;
+}
+
+export interface ImageExportPipelineStep {
+  step: string;
+  title: string;
+  status: string;
+  active: boolean;
+  done: boolean;
+}
+
+export interface ImageExportDeployOption {
+  id: string;
+  tag: string;
+  title: string;
+  description: string;
+  selected?: boolean;
+}
+
+export interface ImageExportKey {
+  name: string;
+  tag: string;
+  tag_type: 'live' | 'test';
+  detail: string;
+  used: string;
+}
+
+export interface ImageExportWebhook {
+  event: string;
+  desc: string;
+  enabled: boolean;
+}
+
+export interface ImageExportTrafficKPI {
+  label: string;
+  value: string;
+  sub: string;
+  tooltip?: string;
+}
+
+export interface ImageExportTrafficTableRow {
+  version: string;
+  runs_on: string;
+  status: string;
+  status_type: 'prod' | 'shadow' | 'archived';
+  traffic: string;
+  p95: string;
+  p95_val?: string;
+  errors: string;
+  errors_val?: string;
+  action_label: string;
+  action_key: string;
+}
+
+export interface ImageExportGuardrail {
+  title: string;
+  desc: string;
+  status: 'ok' | 'warn';
+}
+
+export interface ImageExportStateResponse {
+  dataset_id: string;
+  dataset_name: string;
+  header: {
+    breadcrumb: string;
+    model_title: string;
+    model_arch: string;
+    badge_approved: string;
+    versions_on_line: string;
+    model_name: string;
+    model_sub: string;
+    in_production: string;
+    in_production_sub: string;
+    target: string;
+    target_sub: string;
+    frames_7days: string;
+    frames_7days_sub: string;
+    info_box: string;
+  };
+  datasets_export: {
+    subtitle: string;
+    versions: ImageExportDatasetVersion[];
+    formats: ImageExportDatasetFormat[];
+    export_options: ImageExportOption[];
+    summary: string;
+    footnote: string;
+  };
+  model_package: {
+    subtitle: string;
+    formats: ImageExportModelPackageFormat[];
+    calibration_note: string;
+    what_ships: ImageExportWhatShips[];
+    cli_command: string;
+  };
+  deploy: {
+    subtitle: string;
+    pipeline: ImageExportPipelineStep[];
+    options: ImageExportDeployOption[];
+  };
+  api_section: {
+    subtitle: string;
+    endpoint_method: string;
+    endpoint_path: string;
+    curl_snippet: string;
+    python_snippet: string;
+    response_json: Record<string, any>;
+    footnote: string;
+    keys: ImageExportKey[];
+    rate_limit: string;
+    max_input: string;
+    webhooks: ImageExportWebhook[];
+  };
+  versions_traffic: {
+    subtitle: string;
+    kpis: ImageExportTrafficKPI[];
+    table: ImageExportTrafficTableRow[];
+    footnote: string;
+  };
+  guardrails: ImageExportGuardrail[];
+  bottom_bar: {
+    title: string;
+    sub: string;
+    action_back: string;
+    action_primary: string;
+  };
+}

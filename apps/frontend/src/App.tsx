@@ -18,6 +18,8 @@ import { TextVersioningPage } from './pages/TextVersioningPage';
 import { TextLabelingPage } from './pages/TextLabelingPage';
 import { TextTrainingPage } from './pages/TextTrainingPage';
 import { TextActiveLearningPage } from './pages/TextActiveLearningPage';
+import { TextDriftPage } from './pages/TextDriftPage';
+import { TextExportApiPage } from './pages/TextExportApiPage';
 import { ImageProfilingPage } from './pages/ImageProfilingPage';
 import { ImageCleaningPage } from './pages/ImageCleaningPage';
 import { ImageAugmentationPage } from './pages/ImageAugmentationPage';
@@ -25,6 +27,8 @@ import { ImageVersioningPage } from './pages/ImageVersioningPage';
 import { ImageLabelingPage } from './pages/ImageLabelingPage';
 import { ImageTrainingPage } from './pages/ImageTrainingPage';
 import { ImageActiveLearningPage } from './pages/ImageActiveLearningPage';
+import { ImageDriftPage } from './pages/ImageDriftPage';
+import { ImageExportApiPage } from './pages/ImageExportApiPage';
 import { ArrowRight, Download } from 'lucide-react';
 import { api } from './services/api';
 
@@ -454,44 +458,126 @@ const TopBar: React.FC<{ modality: 'tabular' | 'text' | 'image'; onModalityChang
             </>
           )
         ) : location.pathname === '/drift' ? (
-          <>
-            <button
-              type="button"
-              className="btn btn-secondary font-mono"
-              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
-              onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-drift-history'))}
-            >
-              Historique de dérive
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary font-mono"
-              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
-              onClick={() => navigate('/export-api')}
-            >
-              <span>Continuer vers l'export</span>
-              <ArrowRight size={14} />
-            </button>
-          </>
-        ) : location.pathname === '/export-api' ? (
-          <>
-            <button
-              type="button"
-              className="btn btn-secondary font-mono"
-              style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
-              onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-version-history'))}
-            >
-              Version history
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary font-mono"
-              style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
-              onClick={() => window.dispatchEvent(new CustomEvent('datalift:deploy-to-staging'))}
-            >
-              <span>Deploy to staging →</span>
-            </button>
-          </>
+          modality === 'text' || modality === 'image' ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-drift-history'))}
+              >
+                Drift history
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{
+                  fontSize: '0.78rem',
+                  padding: '0.45rem 1rem',
+                  backgroundColor: '#f59e0b',
+                  color: '#000',
+                  fontWeight: 600,
+                  border: 'none',
+                }}
+                onClick={() => navigate('/export-api')}
+              >
+                <span>Continue to export →</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-drift-history'))}
+              >
+                Historique de dérive
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+                onClick={() => navigate('/export-api')}
+              >
+                <span>Continuer vers l'export</span>
+                <ArrowRight size={14} />
+              </button>
+            </>
+          )
+        ) : location.pathname === '/export-api' || location.pathname === '/text-export-api' || location.pathname === '/image-export-api' ? (
+          modality === 'image' ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-version-history'))}
+              >
+                Version history
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{
+                  fontSize: '0.78rem',
+                  padding: '0.45rem 1rem',
+                  backgroundColor: '#f59e0b',
+                  color: '#000',
+                  fontWeight: 600,
+                  border: 'none',
+                }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:start-shadow'))}
+              >
+                <span>Start shadow on line 2</span>
+              </button>
+            </>
+          ) : modality === 'text' ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-version-history'))}
+              >
+                Version history
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{
+                  fontSize: '0.78rem',
+                  padding: '0.45rem 1rem',
+                  backgroundColor: '#f59e0b',
+                  color: '#000',
+                  fontWeight: 600,
+                  border: 'none',
+                }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:deploy-to-staging'))}
+              >
+                <span>Deploy to staging</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary font-mono"
+                style={{ fontSize: '0.75rem', padding: '0.45rem 0.95rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:open-version-history'))}
+              >
+                Version history
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary font-mono"
+                style={{ fontSize: '0.78rem', padding: '0.45rem 1rem' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('datalift:deploy-to-staging'))}
+              >
+                <span>Deploy to staging →</span>
+              </button>
+            </>
+          )
         ) : (
 
           <>
@@ -656,10 +742,26 @@ export const App: React.FC = () => {
               <Route path="/image-active-learning" element={<ImageActiveLearningPage />} />
 
               {/* 08. Drift */}
-              <Route path="/drift" element={<DriftPage />} />
+              <Route
+                path="/drift"
+                element={
+                  modality === 'image' ? <ImageDriftPage /> :
+                  modality === 'text' ? <TextDriftPage /> : <DriftPage />
+                }
+              />
+              <Route path="/text-drift" element={<TextDriftPage />} />
+              <Route path="/image-drift" element={<ImageDriftPage />} />
 
               {/* 09. Export / API */}
-              <Route path="/export-api" element={<ExportApiPage />} />
+              <Route
+                path="/export-api"
+                element={
+                  modality === 'image' ? <ImageExportApiPage /> :
+                  modality === 'text' ? <TextExportApiPage /> : <ExportApiPage />
+                }
+              />
+              <Route path="/text-export-api" element={<TextExportApiPage />} />
+              <Route path="/image-export-api" element={<ImageExportApiPage />} />
 
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/versioning" replace />} />

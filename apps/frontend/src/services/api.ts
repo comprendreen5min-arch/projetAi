@@ -57,6 +57,10 @@ import {
   ImageLabelingDataResponse,
   ImageTrainingDataResponse,
   ImageActiveLearningDataResponse,
+  TextDriftDataResponse,
+  TextExportStateResponse,
+  ImageDriftDataResponse,
+  ImageExportStateResponse,
 } from '../types';
 
 
@@ -801,6 +805,129 @@ export const api = {
 
   async sendImageActiveLearningToLabeling(datasetId: string, payload: any): Promise<any> {
     const res = await apiClient.post(`/image-active-learning/${datasetId}/send-to-labeling`, payload);
+    return res.data;
+  },
+
+  async getTextDriftData(datasetId: string): Promise<TextDriftDataResponse> {
+    const res = await apiClient.get<TextDriftDataResponse>(`/text-drift/${datasetId}/data`);
+    return res.data;
+  },
+
+  async saveTextDriftSettings(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-drift/${datasetId}/save-settings`, payload);
+    return res.data;
+  },
+
+  async runTextDriftCheck(datasetId: string): Promise<any> {
+    const res = await apiClient.post(`/text-drift/${datasetId}/run-check`);
+    return res.data;
+  },
+
+  async adoptTextDriftReference(datasetId: string, payload: any = {}): Promise<any> {
+    const res = await apiClient.post(`/text-drift/${datasetId}/adopt-reference`, payload);
+    return res.data;
+  },
+
+  async sendTextDriftClusterTo07(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-drift/${datasetId}/send-cluster-to-07`, payload);
+    return res.data;
+  },
+
+  // Text Export / API (09 Export / API)
+  async getTextExportApiState(datasetId: string): Promise<TextExportStateResponse> {
+    const res = await apiClient.get<TextExportStateResponse>(`/text-export-api/${datasetId}/state`);
+    return res.data;
+  },
+
+  async updateTextExportApiSettings(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.put(`/text-export-api/${datasetId}/settings`, payload);
+    return res.data;
+  },
+
+  async deployTextToStaging(datasetId: string): Promise<any> {
+    const res = await apiClient.post(`/text-export-api/${datasetId}/deploy-staging`);
+    return res.data;
+  },
+
+  async createTextApiKey(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-export-api/${datasetId}/api-keys`, payload);
+    return res.data;
+  },
+
+  async addTextWebhook(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-export-api/${datasetId}/webhooks`, payload);
+    return res.data;
+  },
+
+  async buildTextPackage(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/text-export-api/${datasetId}/build-package`, payload);
+    return res.data;
+  },
+
+  // Image Drift (08 Drift for Images)
+  async getImageDriftData(datasetId: string): Promise<ImageDriftDataResponse> {
+    const res = await apiClient.get<ImageDriftDataResponse>(`/image-drift/${datasetId}/data`);
+    return res.data;
+  },
+
+  async saveImageDriftSettings(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-drift/${datasetId}/save-settings`, payload);
+    return res.data;
+  },
+
+  async runImageDriftCheck(datasetId: string): Promise<any> {
+    const res = await apiClient.post(`/image-drift/${datasetId}/run-check`);
+    return res.data;
+  },
+
+  async adoptImageDriftReference(datasetId: string, payload: any = {}): Promise<any> {
+    const res = await apiClient.post(`/image-drift/${datasetId}/adopt-reference`, payload);
+    return res.data;
+  },
+
+  async sendImageDriftTo07(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-drift/${datasetId}/send-to-07`, payload);
+    return res.data;
+  },
+
+  async reportImageDriftToLine(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-drift/${datasetId}/report-to-line`, payload);
+    return res.data;
+  },
+
+  // Image Export / API (09 Export / API for Images)
+  async getImageExportState(datasetId: string): Promise<ImageExportStateResponse> {
+    const res = await apiClient.get<ImageExportStateResponse>(`/image-export-api/${datasetId}/state`);
+    return res.data;
+  },
+
+  async downloadImageDataset(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-export-api/${datasetId}/download`, payload);
+    return res.data;
+  },
+
+  async buildImageModelPackage(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-export-api/${datasetId}/build-package`, payload);
+    return res.data;
+  },
+
+  async startImageShadow(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-export-api/${datasetId}/start-shadow`, payload);
+    return res.data;
+  },
+
+  async createImageApiKey(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-export-api/${datasetId}/create-key`, payload);
+    return res.data;
+  },
+
+  async addImageWebhook(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-export-api/${datasetId}/add-webhook`, payload);
+    return res.data;
+  },
+
+  async rollbackImageModel(datasetId: string, payload: any): Promise<any> {
+    const res = await apiClient.post(`/image-export-api/${datasetId}/rollback`, payload);
     return res.data;
   },
 };
